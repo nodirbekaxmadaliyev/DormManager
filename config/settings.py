@@ -30,6 +30,7 @@ INSTALLED_APPS = [
     'accounts',
     'dormitory',
     'employee',
+    'dashboard',
 ]
 
 MIDDLEWARE = [
