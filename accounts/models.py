@@ -1,4 +1,3 @@
-from django.core.exceptions import ValidationError
 from django.utils.translation import gettext_lazy as _
 from django.contrib.auth.models import AbstractUser
 from django.db import models
@@ -6,6 +5,10 @@ import os
 from django.utils.text import slugify
 from django.db.models.signals import pre_delete
 from django.dispatch import receiver
+from django.conf import settings
+from django.core.exceptions import ValidationError
+
+# Create your models here.
 
 class AutoIncrementField(models.PositiveIntegerField):
     def __init__(self, start_from=1, *args, **kwargs):
@@ -39,9 +42,6 @@ class AutoIncrementField(models.PositiveIntegerField):
 
         return super().pre_save(model_instance, add)
 
-
-
-# Create your models here.
 def staff_photo_upload_path(instance, filename):
     """Hodim suratlari uchun upload pathini generatsiya qilish"""
     ext = filename.split('.')[-1]
@@ -134,3 +134,17 @@ def delete_user_photo(sender, instance, **kwargs):
     if instance.photo:
         if os.path.isfile(instance.photo.path):
             os.remove(instance.photo.path)
+
+class Director(models.Model):
+    user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+
+    def clean(self):
+        if self.user.role != 'director':
+            raise ValidationError("Faqat direktor roliga ega foydalanuvchini bog'lashingiz mumkin.")
+
+    def save(self, *args, **kwargs):
+        self.clean()
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return f"{self.user.get_full_name()} (Direktor)"
