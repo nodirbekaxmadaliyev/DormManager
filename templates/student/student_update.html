@@ -1,0 +1,105 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="card">
+        <div class="card-header bg-primary text-white">
+            <h4 class="mb-0">{{ title }}: {{ object.last_name }} {{ object.first_name }}</h4>
+        </div>
+        
+        <div class="card-body">
+            <form method="post" enctype="multipart/form-data">
+                {% csrf_token %}
+                
+                <!-- Xato xabarlarini ko'rsatish -->
+                {% if form.errors %}
+                <div class="alert alert-danger">
+                    <strong>Xatolik!</strong> Quyidagi maydonlarda xatoliklar mavjud:
+                    <ul>
+                        {% for field, errors in form.errors.items %}
+                            {% for error in errors %}
+                                <li>{{ error }}</li>
+                            {% endfor %}
+                        {% endfor %}
+                    </ul>
+                </div>
+                {% endif %}
+                
+                <div class="row">
+                    <div class="col-md-6">
+                        <!-- Xona -->
+                        <div class="mb-3">
+                            <label for="{{ form.room.id_for_label }}" class="form-label">Xona</label>
+                            <input type="text" class="form-control" id="{{ form.room.id_for_label }}" 
+                                   name="{{ form.room.name }}" value="{{ form.room.value|default_if_none:'' }}">
+                            {% if form.room.help_text %}
+                            <small class="text-muted">{{ form.room.help_text }}</small>
+                            {% endif %}
+                        </div>
+                        
+                        <!-- Fakultet -->
+                        <div class="mb-3">
+                            <label for="{{ form.faculty.id_for_label }}" class="form-label">Fakultet</label>
+                            <input type="text" class="form-control" id="{{ form.faculty.id_for_label }}" 
+                                   name="{{ form.faculty.name }}" value="{{ form.faculty.value|default_if_none:'' }}">
+                        </div>
+                        
+                        <!-- Telefon raqami -->
+                        <div class="mb-3">
+                            <label for="{{ form.phone_number.id_for_label }}" class="form-label">Telefon raqami</label>
+                            <input type="text" class="form-control" id="{{ form.phone_number.id_for_label }}" 
+                                   name="{{ form.phone_number.name }}" value="{{ form.phone_number.value|default_if_none:'' }}">
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <!-- Holati -->
+                        <div class="mb-3">
+                            <label class="form-label">Holati</label>
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" id="{{ form.is_in_dormitory.id_for_label }}" 
+                                       name="{{ form.is_in_dormitory.name }}" {% if form.is_in_dormitory.value %}checked{% endif %}>
+                                <label class="form-check-label" for="{{ form.is_in_dormitory.id_for_label }}">
+                                    {% if form.is_in_dormitory.value %}Ichkarida{% else %}Tashqarida{% endif %}
+                                </label>
+                            </div>
+                        </div>
+                        
+                        <!-- Ketish sanasi -->
+                        <div class="mb-3">
+                            <label for="{{ form.checkout_time.id_for_label }}" class="form-label">Ketish sanasi</label>
+                            <input type="date" class="form-control" id="{{ form.checkout_time.id_for_label }}" 
+                                   name="{{ form.checkout_time.name }}" value="{{ form.checkout_time.value|date:'Y-m-d'|default_if_none:'' }}">
+                            <small class="text-muted">Agar talaba ketayotgan bo'lsa, sanani kiriting</small>
+                        </div>
+                        
+                        <!-- To'lov miqdori -->
+                        <div class="mb-3">
+                            <label for="{{ form.total_payment.id_for_label }}" class="form-label">To'lov miqdori (so'm)</label>
+                            <input type="number" class="form-control" id="{{ form.total_payment.id_for_label }}" 
+                                   name="{{ form.total_payment.name }}" value="{{ form.total_payment.value|default_if_none:0 }}" min="0">
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="d-flex justify-content-between mt-4">
+                    <a href="{% url 'student_detail' object.id %}" class="btn btn-secondary">
+                        <i class="fas fa-times"></i> Bekor qilish
+                    </a>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-save"></i> Saqlash
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+// Holat checkboxi uchun JavaScript
+document.getElementById('{{ form.is_in_dormitory.id_for_label }}').addEventListener('change', function() {
+    const label = document.querySelector(`label[for='{{ form.is_in_dormitory.id_for_label }}']`);
+    label.textContent = this.checked ? 'Ichkarida' : 'Tashqarida';
+});
+</script>
+{% endblock %}

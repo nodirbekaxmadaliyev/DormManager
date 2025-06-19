@@ -1,0 +1,173 @@
+
+{% extends "base.html" %}
+
+{% block content %}
+{% load widget_tweaks %}
+<div class="container mt-3">
+    <div class="card">
+        <div class="card-header bg-success text-white">
+            <h4 class="mb-0">Yangi Talaba Qo'shish</h4>
+        </div>
+        
+        <div class="card-body">
+            <form method="post" enctype="multipart/form-data">
+                {% csrf_token %}
+                
+                <!-- Xato xabarlari -->
+                {% if form.errors %}
+                <div class="alert alert-danger">
+                    <strong>Xatolik!</strong> Quyidagi maydonlarda xatoliklar mavjud:
+                    <ul>
+                        {% for field, errors in form.errors.items %}
+                            {% for error in errors %}
+                                <li>{{ field }}: {{ error }}</li>
+                            {% endfor %}
+                        {% endfor %}
+                    </ul>
+                </div>
+                {% endif %}
+                
+                <div class="row">
+                    <!-- Asosiy ma'lumotlar -->
+                    <div class="col-md-6">
+                        <h5 class="border-bottom pb-2">Shaxsiy ma'lumotlar</h5>
+                        
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="id_first_name" class="form-label">Ism*</label>
+                                <input type="text" class="form-control" id="id_first_name" 
+                                       name="first_name" required>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="id_last_name" class="form-label">Familiya*</label>
+                                <input type="text" class="form-control" id="id_last_name" 
+                                       name="last_name" required>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+    <label for="{{ form.dormitory.id_for_label }}" class="form-label">Yotoqxona</label>
+    {{ form.dormitory|add_class:"form-select" }}
+    {% for error in form.dormitory.errors %}
+        <div class="text-danger small">{{ error }}</div>
+    {% endfor %}
+</div>
+                        <div class="mb-3">
+                            <label for="id_phone_number" class="form-label">Telefon raqami*</label>
+                            <input type="tel" class="form-control" id="id_phone_number" 
+                                   name="phone_number" placeholder="+998901234567" required>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="id_parent_full_name" class="form-label">Ota-ona F.I.SH*</label>
+                            <input type="text" class="form-control" id="id_parent_full_name" 
+                                   name="parent_full_name" required>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="id_image" class="form-label">Talaba rasmi</label>
+                            <input type="file" class="form-control" id="id_image" 
+                                   name="image" accept="image/*">
+                        </div>
+                    </div>
+                    
+                    <!-- Yotoqxona va shartnoma ma'lumotlari -->
+                    <div class="col-md-6">
+                        <h5 class="border-bottom pb-2">Yotoqxona ma'lumotlari</h5>
+                        
+                        <div class="row">
+                            <div class="col-md-8 mb-3">
+                                <label for="id_faculty" class="form-label">Fakultet*</label>
+                                <input type="text" class="form-control" id="id_faculty" 
+                                       name="faculty" required>
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <label for="id_room" class="form-label">Xona*</label>
+                                <input type="text" class="form-control" id="id_room" 
+                                       name="room" required>
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label class="form-label">Holati*</label>
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" id="id_is_in_dormitory" 
+                                       name="is_in_dormitory" checked>
+                                <label class="form-check-label" for="id_is_in_dormitory">
+                                    Ichkarida
+                                </label>
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="id_arrival_time" class="form-label">Kelgan sana*</label>
+                            <input type="date" class="form-control" id="id_arrival_time" 
+                                   name="arrival_time" required>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="id_checkout_time" class="form-label">Ketish sanasi</label>
+                            <input type="date" class="form-control" id="id_checkout_time" 
+                                   name="checkout_time">
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Shartnoma ma'lumotlari -->
+                <div class="row mt-3">
+                    <div class="col-12">
+                        <h5 class="border-bottom pb-2">Shartnoma ma'lumotlari</h5>
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="id_contract_number" class="form-label">Shartnoma raqami*</label>
+                                <input type="text" class="form-control" id="id_contract_number" 
+                                       name="contract_number" required>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="id_contract_date" class="form-label">Shartnoma sanasi*</label>
+                                <input type="date" class="form-control" id="id_contract_date" 
+                                       name="contract_date" required>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label for="id_total_payment" class="form-label">To'lov miqdori (so'm)*</label>
+                            <input type="number" class="form-control" id="id_total_payment" 
+                                   name="total_payment" min="0" required>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Tugmalar -->
+                <div class="d-flex justify-content-between mt-4">
+                    <a href="{% url 'students' %}" class="btn btn-secondary">
+                        <i class="fas fa-times"></i> Bekor qilish
+                    </a>
+                    <button type="submit" class="btn btn-success">
+                        <i class="fas fa-save"></i> Saqlash
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Mobil qurilmalar uchun JavaScript -->
+<script>
+// Holat switch uchun
+document.getElementById('id_is_in_dormitory').addEventListener('change', function() {
+    const label = document.querySelector(`label[for='id_is_in_dormitory']`);
+    label.textContent = this.checked ? 'Ichkarida' : 'Tashqarida';
+});
+
+// Sana maydonlarini mobil uchun optimallashtirish
+if (/Mobi|Android/i.test(navigator.userAgent)) {
+    const dateInputs = document.querySelectorAll('input[type="date"]');
+    dateInputs.forEach(input => {
+        // Mobile browsers uchun maxsus ishlov
+        input.addEventListener('focus', function() {
+            this.type = 'date';
+            this.showPicker(); // Chrome uchun kalendar ni avtomatik ochish
+        });
+    });
+}
+</script>
+{% endblock %}

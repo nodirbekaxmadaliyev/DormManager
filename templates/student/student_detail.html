@@ -1,0 +1,134 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="card">
+        <div class="card-header bg-primary text-white">
+            <div class="d-flex justify-content-between align-items-center">
+                <h4 class="mb-0">{{ student.last_name }} {{ student.first_name }}</h4>
+                <a href="{% url 'students' %}" class="btn btn-light btn-sm">
+                    <i class="fas fa-arrow-left"></i> Orqaga
+                </a>
+            </div>
+        </div>
+        
+        <div class="card-body">
+            <div class="row">
+                <!-- Talaba rasmi -->
+                <div class="col-md-4 text-center mb-3">
+                    {% if student.image %}
+                        <img src="{{ student.image.url }}" alt="Talaba rasmi" class="img-fluid rounded" style="max-height: 300px;">
+                    {% else %}
+                        <div class="bg-light p-5 text-center">
+                            <i class="fas fa-user fa-5x text-secondary"></i>
+                            <p class="mt-2">Rasm mavjud emas</p>
+                        </div>
+                    {% endif %}
+                </div>
+                
+                <!-- Talaba ma'lumotlari -->
+                <div class="col-md-8">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h5>Asosiy ma'lumotlar</h5>
+                            <ul class="list-group list-group-flush mb-3">
+
+                                <li class="list-group-item d-flex justify-content-between">
+                                    <span class="fw-bold">Yotoqxona:</span>
+                                    <span>{{ student.dormitory.name }}</span>
+                                </li>
+
+                                <li class="list-group-item d-flex justify-content-between">
+                                    <span class="fw-bold">ID:</span>
+                                    <span>{{ student.id }}</span>
+                                </li>
+                                <li class="list-group-item d-flex justify-content-between">
+                                    <span class="fw-bold">Xona:</span>
+                                    <span>{{ student.room }}</span>
+                                </li>
+                                <li class="list-group-item d-flex justify-content-between">
+                                    <span class="fw-bold">Fakultet:</span>
+                                    <span>{{ student.faculty }}</span>
+                                </li>
+                                <li class="list-group-item d-flex justify-content-between">
+                                    <span class="fw-bold">Telefon:</span>
+                                    <span>{{ student.phone_number }}</span>
+                                </li>
+                                <li class="list-group-item d-flex justify-content-between">
+                                    <span class="fw-bold">Holati:</span>
+                                    <span class="badge bg-{% if student.is_in_dormitory %}success{% else %}warning{% endif %}">
+                                        {% if student.is_in_dormitory %}Ichkarida{% else %}Tashqarida{% endif %}
+                                    </span>
+                                </li>
+                            </ul>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <h5>Shartnoma ma'lumotlari</h5>
+                            <ul class="list-group list-group-flush mb-3">
+                                <li class="list-group-item d-flex justify-content-between">
+                                    <span class="fw-bold">Shartnoma raqami:</span>
+                                    <span>{{ student.contract_number }}</span>
+                                </li>
+                                <li class="list-group-item d-flex justify-content-between">
+                                    <span class="fw-bold">Shartnoma sanasi:</span>
+                                    <span>{{ student.contract_date|date:"d.m.Y" }}</span>
+                                </li>
+                                <li class="list-group-item d-flex justify-content-between">
+                                    <span class="fw-bold">Kelgan sana:</span>
+                                    <span>{{ student.arrival_time|date:"d.m.Y" }}</span>
+                                </li>
+                                <li class="list-group-item d-flex justify-content-between">
+                                    <span class="fw-bold">Ketadigan sana:</span>
+                                    <span>
+                                        {% if student.checkout_time %}
+                                            {{ student.checkout_time|date:"d.m.Y" }}
+                                        {% else %}
+                                            <span class="text-muted">Hali ketmagan</span>
+                                        {% endif %}
+                                    </span>
+                                </li>
+                                <li class="list-group-item d-flex justify-content-between">
+                                    <span class="fw-bold">To'lov miqdori:</span>
+                                    <span>{{ student.total_payment }} so'm</span>
+                                </li>
+                            </ul>
+                        </div>
+                    </div>
+                    
+                    <div class="row mt-3">
+                        <div class="col-12">
+                            <h5>Ota-ona ma'lumotlari</h5>
+                            <ul class="list-group list-group-flush">
+                                <li class="list-group-item d-flex justify-content-between">
+                                    <span class="fw-bold">Ota-ona F.I.SH:</span>
+                                    <span>{{ student.parent_full_name }}</span>
+                                </li>
+                                <li class="list-group-item d-flex justify-content-between">
+                                    <span class="fw-bold">Login:</span>
+                                    <span>{{ student.parent_login }}</span>
+                                </li>
+                                <li class="list-group-item d-flex justify-content-between">
+                                    <span class="fw-bold">Parol:</span>
+                                    <span>{{ student.parent_password }}</span>
+                                </li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="card-footer text-end">
+            <a href="{% url 'student_update' student.pk %}" class="btn btn-primary me-2">
+                <i class="fas fa-edit"></i> Tahrirlash
+            </a>
+            <button type="button" class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#deleteModal">
+                <i class="fas fa-trash"></i> O'chirish
+            </button>
+        </div>
+    </div>
+</div>
+{% include 'student/student_delete.html' %}
+{% endblock %}

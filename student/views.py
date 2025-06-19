@@ -1,3 +1,237 @@
-from django.shortcuts import render
+import tempfile
+import os
+from django.views.generic import ListView, DetailView, UpdateView, DeleteView, CreateView
+from django.urls import reverse_lazy, reverse
+from django import forms
+from dormitory.models import Dormitory
+from .models import Student
+import pandas as pd
+from django.http import HttpResponse
+from datetime import datetime
+from openpyxl import Workbook
+from utils.hikvision import add_user_to_devices, delete_user_from_devices, update_user_on_devices
+from django.contrib import messages
+from django.shortcuts import render, redirect
+from django.contrib.auth.mixins import LoginRequiredMixin
 
-# Create your views here.
+class StudentListView(ListView):
+    model = Student
+    template_name = 'student/home.html'
+    context_object_name = 'object_list'
+    paginate_by = 20
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        user = self.request.user
+
+        # Foydalanuvchi direktor bo‘lsa, unga tegishli yotoqxonalarni qo‘shish
+        if hasattr(user, 'director'):
+            context['dormitories'] = Dormitory.objects.filter(director=user.director)
+        return context
+
+    def get_queryset(self):
+        queryset = super().get_queryset()
+
+        # Status filter (ichkarida/tashqarida)
+        status = self.request.GET.get('status', '')
+        if status == 'in_dormitory':
+            queryset = queryset.filter(is_in_dormitory=True)
+        elif status == 'out_dormitory':
+            queryset = queryset.filter(is_in_dormitory=False)
+
+        # Qidiruv parametrlari
+        dormitory = self.request.GET.get('dormitory', '')
+        room = self.request.GET.get('room', '')
+        first_name = self.request.GET.get('first_name', '')
+        faculty = self.request.GET.get('faculty', '')
+
+        if dormitory:
+            queryset = queryset.filter(dormitory__name__icontains=dormitory)
+        if room:
+            queryset = queryset.filter(room__icontains=room)
+        if first_name:
+            queryset = queryset.filter(first_name__icontains=first_name)
+        if faculty:
+            queryset = queryset.filter(faculty__icontains=faculty)
+
+        return queryset.order_by('dormitory__name', 'room', 'last_name', 'first_name')
+
+    def get(self, request, *args, **kwargs):
+        if request.GET.get("export") == "excel":
+            queryset = self.get_queryset()
+
+            # DataFrame yaratish
+            df = pd.DataFrame(list(queryset.values(
+                'first_name', 'last_name', 'dormitory__name', 'faculty', 'room',
+                'phone_number', 'is_in_dormitory', 'arrival_time',
+                'checkout_time', 'total_payment'
+            )))
+
+            df.index = df.index + 1
+            df.insert(0, '№', df.index)
+
+            # Sarlavhalarni o'zgartirish
+            df.rename(columns={
+                'first_name': 'Ismi',
+                'last_name': 'Familiyasi',
+                'dormitory__name': 'Yotoqxonasi',
+                'faculty': 'Fakulteti',
+                'room': 'Xonasi',
+                'phone_number': 'Telefon raqami',
+                'is_in_dormitory': 'Yotoqxonada',
+                'arrival_time': 'Kelgan sana',
+                'checkout_time': 'Ketadigan sana',
+                'total_payment': 'To\'lov summasi'
+            }, inplace=True)
+
+            # Boolean qiymatlarni formatlash
+            df['Yotoqxonada'] = df['Yotoqxonada'].map({True: 'Ha', False: 'Yo\'q'})
+
+            # Sana maydonlarini formatlash (None qiymatlarni hisobga olgan holda)
+            for date_col in ['Kelgan sana', 'Ketadigan sana']:
+                df[date_col] = pd.to_datetime(df[date_col], errors='coerce')
+                df[date_col] = df[date_col].dt.strftime('%Y-%m-%d')
+                df[date_col] = df[date_col].replace('NaT', '')
+
+            now = datetime.now().strftime("%Y-%m-%d_%H-%M")
+            filename = f"talabalar_{now}.xlsx"
+
+            response = HttpResponse(content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+            response['Content-Disposition'] = f'attachment; filename={filename}'
+            df.to_excel(response, index=False)
+            return response
+
+        return super().get(request, *args, **kwargs)
+
+    def render_to_response(self, context, **response_kwargs):
+        if self.request.GET.get('export') == 'excel':
+            return self.export_to_excel(context['object_list'])
+        return super().render_to_response(context, **response_kwargs)
+
+    def export_to_excel(self, queryset):
+        wb = Workbook()
+        ws = wb.active
+        ws.title = "Talabalar ro'yxati"
+
+        # Sarlavhalar
+        ws.append(['Ismi', 'Familiyasi', 'Xonasi', 'Fakulteti', 'Yotoqxonada'])
+
+        # Ma’lumotlar
+        for student in queryset:
+            ws.append([
+                student.first_name,
+                student.last_name,
+                student.room,
+                student.faculty,
+                'Ichkarida' if student.is_in_dormitory else 'Tashqarida'
+            ])
+
+        response = HttpResponse(
+            content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+        )
+        response['Content-Disposition'] = 'attachment; filename=talabalar.xlsx'
+        wb.save(response)
+        return response
+
+class StudentDetailView(DetailView):
+    model = Student
+    template_name = 'student/student_detail.html'
+    context_object_name = 'student'
+
+class StudentUpdateView(UpdateView):
+    model = Student
+    template_name = 'student/student_update.html'
+    fields = ['room', 'faculty', 'phone_number', 'is_in_dormitory', 'checkout_time', 'total_payment']
+    def get_success_url(self):
+        return reverse('student_detail', kwargs={'pk': self.object.pk})
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['title'] = "Talaba ma'lumotlarini tahrirlash"
+        return context
+
+class StudentDeleteView(DeleteView):
+    model = Student
+    template_name = 'student/student_delete.html'
+    success_url = reverse_lazy('students')
+
+    def form_valid(self, request, *args, **kwargs):
+        self.object = self.get_object()
+        employee_id = str(self.object.id)
+        dormitory = self.object.dormitory
+        success, reason = delete_user_from_devices(dormitory, employee_id)
+        if not success:
+            # Qurilmalardan o‘chirishda xatolik bo‘lsa, foydalanuvchini modeldan o‘chirmaymiz
+            messages.error(request, f"Foydalanuvchi qurilmalardan o‘chmadi: {reason}")
+            return self.get(request, *args, **kwargs)
+
+        return super().delete(request, *args, **kwargs)
+
+class StudentCreateForm(forms.ModelForm):
+    class Meta:
+        model = Student
+        fields = [
+            'first_name', 'last_name', 'faculty', 'dormitory', 'room',
+            'phone_number', 'is_in_dormitory', 'image',
+            'contract_number', 'contract_date',
+            'arrival_time', 'checkout_time',
+            'total_payment', 'parent_full_name'
+        ]
+
+    def __init__(self, *args, **kwargs):
+        user = kwargs.pop('user', None)
+        super().__init__(*args, **kwargs)
+        if user:
+            if hasattr(user, 'director'):
+                self.fields['dormitory'].queryset = Dormitory.objects.filter(director__user=user)
+            elif hasattr(user, 'employee'):
+                self.fields['dormitory'].queryset = Dormitory.objects.filter(pk=user.employee.dormitory.pk)
+            else:
+                self.fields['dormitory'].queryset = Dormitory.objects.none()
+
+class StudentCreateView(LoginRequiredMixin, CreateView):
+    model = Student
+    template_name = 'student/student_add.html'
+    form_class = StudentCreateForm
+    success_url = reverse_lazy('students')
+
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs['user'] = self.request.user  # Foydalanuvchini forma ichiga yuboramiz
+        return kwargs
+
+    def form_valid(self, form):
+        student = form.save(commit=False)
+
+        photo_file = form.cleaned_data.get('image')
+        full_name = f"{form.cleaned_data['first_name']} {form.cleaned_data['last_name']}"
+        dormitory = form.cleaned_data.get('dormitory')
+        if not photo_file:
+            messages.error(self.request, "Surat yuklanmagan. Iltimos, rasmni tanlang.")
+            return render(self.request, self.template_name, {'form': form})
+
+        # Vaqtinchalik fayl yaratish (fayl tizimiga saqlamasdan)
+        with tempfile.NamedTemporaryFile(delete=False, suffix='.jpg') as tmp:
+            for chunk in photo_file.chunks():
+                tmp.write(chunk)
+            tmp_file_path = tmp.name
+
+        student.save()
+
+        success, reason = add_user_to_devices(dormitory, str(student.id), full_name, tmp_file_path)
+
+        # Temp faylni o'chiramiz
+        if os.path.exists(tmp_file_path):
+            os.remove(tmp_file_path)
+
+        if success:
+            messages.success(self.request, "Talaba qurilmalarga muvaffaqiyatli qo‘shildi.")
+            return redirect(self.success_url)
+        else:
+            student.delete()
+            messages.error(self.request, f"Talaba qurilmalarga qo‘shilmadi: {reason}")
+            return render(self.request, self.template_name, {'form': form})
+
+    def form_invalid(self, form):
+        messages.error(self.request, "Ma'lumotlarda xatolik mavjud.")
+        return super().form_invalid(form)

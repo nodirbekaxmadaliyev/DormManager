@@ -1,0 +1,141 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block content %}
+
+<div class="container mt-3">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h2 class="text-center flex-grow-1">Talabalar</h2>
+        <div>
+            <a href="{% url 'student_add' %}" class="btn btn-success">Qo'shish</a>
+            <button id="export-btn" class="btn btn-primary">Yuklash</button>
+        </div>
+    </div>
+</div>
+
+<div class="container mt-3">
+    <form id="search-form" method="get">
+        <div class="table-responsive">
+            <table class="table table-striped">
+                <thead>
+    <tr>
+        {% if request.user.director %}
+        <th>Yotoqxona</th>
+        {% endif %}
+        <th>Xonasi</th>
+        <th>Ismi</th>
+        <th>Fakulteti</th>
+        <th>Holati</th>
+    </tr>
+<tr>
+    {% if request.user.director %}
+    <td>
+        <select name="dormitory" class="form-select search-select" onchange="this.form.submit()">
+            <option value="">Barchasi</option>
+            {% for dorm in dormitories %}
+                <option value="{{ dorm.name }}" {% if request.GET.dormitory == dorm.name %}selected{% endif %}>
+                    {{ dorm.name }}
+                </option>
+            {% endfor %}
+        </select>
+    </td>
+    {% endif %}
+
+        <td><input type="text" name="room" class="form-control search-input" placeholder="Xonasi" value="{{ request.GET.room }}"></td>
+        <td><input type="text" name="first_name" class="form-control search-input" placeholder="Ismi" value="{{ request.GET.first_name }}"></td>
+        <td><input type="text" name="faculty" class="form-control search-input" placeholder="Fakulteti" value="{{ request.GET.faculty }}"></td>
+        <td>
+            <select name="status" class="form-select search-select" onchange="this.form.submit()">
+                <option value="">Barchasi</option>
+                <option value="in_dormitory" {% if request.GET.status == 'in_dormitory' %}selected{% endif %}>Ichkarida</option>
+                <option value="out_dormitory" {% if request.GET.status == 'out_dormitory' %}selected{% endif %}>Tashqarida</option>
+            </select>
+        </td>
+    </tr>
+</thead>
+<tbody>
+    {% for student in object_list %}
+    <tr>
+        {% if request.user.director %}
+        <td>{{ student.dormitory.name }}</td>
+        {% endif %}
+        <td>{{ student.room }}</td>
+        <td>{{ student.first_name }}</td>
+        <td>{{ student.faculty }}</td>
+        <td>
+            <a href="{% url 'student_detail' student.id %}" class="btn btn-sm btn-success">To'liq</a>
+        </td>
+    </tr>
+    {% empty %}
+    <tr>
+        <td colspan="5" class="text-center">Hech qanday natija topilmadi</td>
+    </tr>
+    {% endfor %}
+</tbody>
+
+            </table>
+        </div>
+    </form>
+
+    <!-- Pagination -->
+    {% if is_paginated %}
+    <nav class="mt-3">
+        <ul class="pagination justify-content-center">
+            {% if page_obj.has_previous %}
+            <li class="page-item">
+                <a class="page-link" href="?page={{ page_obj.previous_page_number }}&room={{ request.GET.room }}&last_name={{ request.GET.last_name }}&first_name={{ request.GET.first_name }}&faculty={{ request.GET.faculty }}&status={{ request.GET.status }}">&laquo;</a>
+            </li>
+            {% endif %}
+
+            {% for num in page_obj.paginator.page_range %}
+            <li class="page-item {% if page_obj.number == num %}active{% endif %}">
+                <a class="page-link" href="?page={{ num }}&room={{ request.GET.room }}&last_name={{ request.GET.last_name }}&first_name={{ request.GET.first_name }}&faculty={{ request.GET.faculty }}&status={{ request.GET.status }}">{{ num }}</a>
+            </li>
+            {% endfor %}
+
+            {% if page_obj.has_next %}
+            <li class="page-item">
+                <a class="page-link" href="?page={{ page_obj.next_page_number }}&room={{ request.GET.room }}&last_name={{ request.GET.last_name }}&first_name={{ request.GET.first_name }}&faculty={{ request.GET.faculty }}&status={{ request.GET.status }}">&raquo;</a>
+            </li>
+            {% endif %}
+        </ul>
+    </nav>
+    {% endif %}
+</div>
+
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script>
+$(document).ready(function() {
+    $(".search-input, .search-select").on("keyup change", function() {
+        let formData = $("#search-form").serialize();
+
+        $.ajax({
+            url: "{% url 'students' %}",
+            type: "GET",
+            data: formData,
+            headers: {
+                "X-Requested-With": "XMLHttpRequest"
+            },
+            success: function(data) {
+                $("tbody").html($(data).find("tbody").html());
+            },
+            error: function(xhr, status, error) {
+                console.log("Xatolik:", error);
+            }
+        });
+
+    });
+
+    // Yuklash tugmasi bosilganda eksport qilish
+    $("#export-btn").on("click", function() {
+        const params = $("#search-form").serialize();
+        const url = `{% url 'students' %}?${params}&export=excel`;
+        window.location.href = url;
+    });
+
+});
+
+
+
+</script>
+{% endblock %}

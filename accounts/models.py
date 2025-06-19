@@ -7,6 +7,7 @@ from django.db.models.signals import pre_delete
 from django.dispatch import receiver
 from django.conf import settings
 from django.core.exceptions import ValidationError
+import re
 
 # Create your models here.
 
@@ -94,8 +95,8 @@ class CustomUser(AbstractUser):
 
     photo = models.ImageField(
         upload_to=staff_photo_upload_path,
-        blank=True,
-        null=True,
+        blank=False,
+        null=False,
         verbose_name='Hodim surati'
     )
 
@@ -108,25 +109,28 @@ class CustomUser(AbstractUser):
     is_in_dormitory = models.BooleanField(default=False)
 
     def save(self, *args, **kwargs):
-        if not self.pk:
-            temp_photo = self.photo
-            self.photo = None
-            super().save(*args, **kwargs)
+        is_new = self.pk is None
 
-            self.photo = temp_photo
-
+        if is_new:
+            clean_first_name = re.sub(r'[^a-zA-Z0-9]', '', self.first_name.lower() if self.first_name else 'noname')
+            clean_last_name = re.sub(r'[^a-zA-Z0-9]', '', self.last_name.lower() if self.last_name else 'nosurname')
+            self.username = f"{clean_first_name}.{clean_last_name}"
+            self.set_password("12345678")
 
         super().save(*args, **kwargs)
 
-
+        if is_new:
+            self.username = f"{self.pk}{self.username}"
+            super().save(update_fields=['username'])
 
     def clean(self):
         super().clean()
         if self.password and len(self.password) < 8:
             raise ValidationError(
-                _('Parol kamida 8 ta belgidan iborat bo\'lishi kerak'),
+                _('Parol kamida 4 ta belgidan iborat bo\'lishi kerak'),
                 code='Parol juda qisqa'
             )
+
 
 @receiver(pre_delete, sender=CustomUser)
 def delete_user_photo(sender, instance, **kwargs):

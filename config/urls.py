@@ -6,6 +6,10 @@ from config import settings
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('', include('dashboard.urls')),
+    path('employees/', include('accounts.urls')),
+    path('accounts/', include('django.contrib.auth.urls')),
+    path('students/', include('student.urls')),
+    path('logs/', include('Logs.urls')),
 
 ]
 
