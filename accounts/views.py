@@ -12,9 +12,8 @@ from django.contrib.auth.forms import PasswordChangeForm
 from django.shortcuts import render, redirect
 from  dormitory.models import Dormitory
 import pandas as pd
-from utils.hikvision import add_user_to_devices, delete_user_from_devices, update_user_on_devices
+from utils.hikvision import add_user_to_devices, delete_user_from_devices, update_user_on_devices, update_dormitory_status
 from django.contrib import messages
-
 from employee.models import Employee
 from django.http import HttpResponse
 from datetime import datetime
@@ -33,6 +32,10 @@ class EmployeePage(LoginRequiredMixin, DirectorAccessMixin, ListView):
     model = Employee
     template_name = 'accounts/employees.html'
     context_object_name = 'employees'
+
+    def dispatch(self, request, *args, **kwargs):
+        update_dormitory_status()  # ⚠️ Har bir requestda yangilanadi
+        return super().dispatch(request, *args, **kwargs)
 
     def get_queryset(self):
         user = self.request.user
@@ -62,6 +65,7 @@ class EmployeePage(LoginRequiredMixin, DirectorAccessMixin, ListView):
         return queryset
 
     def get(self, request, *args, **kwargs):
+
         if request.GET.get("export") == "excel":
             queryset = self.get_queryset()
             df = pd.DataFrame(queryset.values(
