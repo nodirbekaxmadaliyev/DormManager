@@ -1,14 +1,125 @@
 import pytz
-
+from Logs.models import SystemConfig
+from datetime import datetime, timedelta
 from dormitory.models import Dormitory
 import os
 import urllib3
-import requests
-from requests.auth import HTTPDigestAuth
+import pytz
 from accounts.models import CustomUser
 from student.models import Student
+import requests
+from requests.auth import HTTPDigestAuth
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
-from datetime import datetime
+
+def update_dormitory_status():
+    print("So'rov keldi")
+    tz = pytz.timezone("Asia/Tashkent")
+
+    last_time_str = SystemConfig.get("LAST_UPDATE_TIME", default=None)
+
+    if last_time_str:
+        try:
+            start_time = datetime.strptime(last_time_str, "%Y-%m-%d %H:%M")
+            if start_time.tzinfo is None:
+                start_time = tz.localize(start_time)
+        except Exception:
+            start_time = datetime.now(tz) - timedelta(minutes=5)
+    else:
+        start_time = datetime.now(tz) - timedelta(minutes=5)
+
+    end_time = datetime.now(tz)
+    # Naive datetime'larni tz-aware qilish
+    if start_time.tzinfo is None:
+        start_time = tz.localize(start_time)
+    if end_time.tzinfo is None:
+        end_time = tz.localize(end_time)
+
+    start_iso = start_time.strftime("%Y-%m-%dT%H:%M:%S+05:00")
+    end_iso = end_time.strftime("%Y-%m-%dT%H:%M:%S+05:00")
+
+    all_logs = []
+    errors = []
+
+    for dormitory in Dormitory.objects.all():
+        for device in dormitory.devices.all():
+            url = f"http://{device.ipaddress}/ISAPI/AccessControl/AcsEvent?format=json"
+            headers = {
+                "Content-Type": "application/json",
+                "Accept": "application/json"
+            }
+            search_position = 0
+            max_results = 20
+
+            while True:
+                payload = {
+                    "AcsEventCond": {
+                        "searchID": "100001",
+                        "searchResultPosition": search_position,
+                        "maxResults": max_results,
+                        "major": 5,
+                        "minor": 75,
+                        "startTime": start_iso,
+                        "endTime": end_iso,
+                        "picEnable": False,
+                        "timeReverseOrder": True
+                    }
+                }
+
+                try:
+                    response = requests.post(url, json=payload, headers=headers,
+                                             auth=HTTPDigestAuth(device.username, device.password), timeout=10)
+
+                    if response.status_code != 200:
+                        errors.append(f"{device.ipaddress} — Status code: {response.status_code}")
+                        break
+
+                    data = response.json()
+                    info_list = data.get("AcsEvent", {}).get("InfoList", [])
+
+                    if not info_list:
+                        break
+
+                    for entry in info_list:
+                        emp_id = entry.get("employeeNoString")
+                        try:
+                            emp_id = int(emp_id)
+                        except:
+                            continue
+
+                        if emp_id < 10000:
+                            try:
+                                user = CustomUser.objects.get(pk=emp_id)
+                                user.is_in_dormitory = device.entrance
+                                user.save(update_fields=['is_in_dormitory'])
+                            except CustomUser.DoesNotExist:
+                                continue
+                        else:
+                            try:
+                                student = Student.objects.get(pk=emp_id)
+                                student.is_in_dormitory = device.entrance
+                                student.save(update_fields=['is_in_dormitory'])
+                            except Student.DoesNotExist:
+                                continue
+
+                        all_logs.append({
+                            "id": emp_id,
+                            "status": "Kirish" if device.entrance else "Chiqish",
+                            "time": entry.get("time"),
+                            "dormitory": dormitory.name
+                        })
+
+                    if len(info_list) < max_results:
+                        break
+                    search_position += max_results
+
+                except Exception as e:
+                    errors.append(f"{device.ipaddress} — Xatolik: {str(e)}")
+                    break
+
+    # Vaqtni yangilash (agar doimiy saqlash kerak bo‘lsa, DB orqali qilish tavsiya)
+    new_last_time = (end_time - timedelta(minutes=3)).strftime("%Y-%m-%d %H:%M")
+    SystemConfig.set("LAST_UPDATE_TIME", new_last_time)
+    return all_logs, errors
 
 def add_user_to_devices(dormitory: Dormitory, employee_id: str, full_name: str, image_path: str) -> tuple[bool, str | None]:
     """Barcha qurilmalarga foydalanuvchini (ism+familiya+id) va rasmni yuklash.

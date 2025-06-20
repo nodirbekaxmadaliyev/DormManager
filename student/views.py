@@ -9,7 +9,7 @@ import pandas as pd
 from django.http import HttpResponse
 from datetime import datetime
 from openpyxl import Workbook
-from utils.hikvision import add_user_to_devices, delete_user_from_devices, update_user_on_devices
+from utils.hikvision import add_user_to_devices, delete_user_from_devices, update_dormitory_status
 from django.contrib import messages
 from django.shortcuts import render, redirect
 from django.contrib.auth.mixins import LoginRequiredMixin
@@ -19,6 +19,10 @@ class StudentListView(ListView):
     template_name = 'student/home.html'
     context_object_name = 'object_list'
     paginate_by = 20
+
+    def dispatch(self, request, *args, **kwargs):
+        update_dormitory_status()  # ⚠️ Talabalar sahifasiga kirilganda yangilanadi
+        return super().dispatch(request, *args, **kwargs)
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)

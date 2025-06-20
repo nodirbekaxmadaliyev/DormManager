@@ -34,6 +34,7 @@ INSTALLED_APPS = [
     'employee',
     'dashboard',
     'student',
+    'Logs',
 ]
 
 MIDDLEWARE = [
@@ -129,4 +130,7 @@ LOGOUT_REDIRECT_URL = 'login'
 CELERY_BROKER_URL = 'redis://localhost:6379/0'
 CELERY_ACCEPT_CONTENT = ['json']
 CELERY_TASK_SERIALIZER = 'json'
+# settings.py
+
+LAST_UPDATE_TIME = "2025-06-10 00:00"
 
