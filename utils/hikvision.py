@@ -4,7 +4,6 @@ from datetime import datetime, timedelta
 from dormitory.models import Dormitory
 import os
 import urllib3
-import pytz
 from accounts.models import CustomUser
 from student.models import Student
 import requests
@@ -12,7 +11,6 @@ from requests.auth import HTTPDigestAuth
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 def update_dormitory_status():
-    print("So'rov keldi")
     tz = pytz.timezone("Asia/Tashkent")
 
     last_time_str = SystemConfig.get("LAST_UPDATE_TIME", default=None)

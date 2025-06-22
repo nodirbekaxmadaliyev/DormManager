@@ -107,6 +107,11 @@ class StudentListView(ListView):
 
         return super().get(request, *args, **kwargs)
 
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context["total_count"] = self.get_queryset().count()
+        return context
+
     def render_to_response(self, context, **response_kwargs):
         if self.request.GET.get('export') == 'excel':
             return self.export_to_excel(context['object_list'])

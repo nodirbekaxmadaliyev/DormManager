@@ -11,7 +11,7 @@ class Dormitory(models.Model):
 
 class Device(models.Model):
     dormitory = models.ForeignKey(Dormitory, on_delete=models.CASCADE, related_name='devices')
-    ipaddress = models.GenericIPAddressField(blank=False)
+    ipaddress = models.CharField(max_length=25, blank=False)
     username = models.CharField(max_length=100, blank=False)
     password = models.CharField(max_length=100, blank=False)
     entrance = models.BooleanField(default=True)

@@ -41,9 +41,9 @@
     </td>
     {% endif %}
 
-        <td><input type="text" name="room" class="form-control search-input" placeholder="Xonasi" value="{{ request.GET.room }}"></td>
-        <td><input type="text" name="first_name" class="form-control search-input" placeholder="Ismi" value="{{ request.GET.first_name }}"></td>
-        <td><input type="text" name="faculty" class="form-control search-input" placeholder="Fakulteti" value="{{ request.GET.faculty }}"></td>
+        <td><input type="text" name="room" class="form-control search-input" placeholder="" value="{{ request.GET.room }}"></td>
+        <td><input type="text" name="first_name" class="form-control search-input" placeholder="" value="{{ request.GET.first_name }}"></td>
+        <td><input type="text" name="faculty" class="form-control search-input" placeholder="" value="{{ request.GET.faculty }}"></td>
         <td>
             <select name="status" class="form-select search-select" onchange="this.form.submit()">
                 <option value="">Barchasi</option>
@@ -74,6 +74,9 @@
 </tbody>
 
             </table>
+            <div class="container mt-2 mb-2">
+                <p><strong>Topilgan talabalar soni:</strong> <span id="total-count">{{ total_count }}</span></p>
+            </div>
         </div>
     </form>
 
@@ -118,6 +121,7 @@ $(document).ready(function() {
             },
             success: function(data) {
                 $("tbody").html($(data).find("tbody").html());
+                $("#total-count").text($(data).find("#total-count").text());
             },
             error: function(xhr, status, error) {
                 console.log("Xatolik:", error);

@@ -21,12 +21,13 @@
                     <th>Tahrirlash</th>
                 </tr>
                 <tr>
-                    <td><input type="text" name="first_name" class="form-control search-input" placeholder="Ismi"></td>
-                    <td><input type="text" name="last_name" class="form-control search-input" placeholder="Familiyasi"></td>
-                    <td><input type="text" name="dormitory_name" class="form-control search-input" placeholder="Ish joyi"></td>
+                    <td><input type="text" name="first_name" class="form-control search-input" placeholder=""></td>
+                    <td><input type="text" name="last_name" class="form-control search-input" placeholder=""></td>
+                    <td><input type="text" name="dormitory_name" class="form-control search-input" placeholder=""></td>
                     <td></td>
                 </tr>
             </thead>
+
             <tbody>
                 {% for employee in object_list %}
                 <tr>
@@ -42,11 +43,16 @@
                 {% endfor %}
             </tbody>
         </table>
+        <div class="container mt-2 mb-2">
+            <p><strong>Topilgan xodimlar soni:</strong> <span id="total-count">{{ total_count }}</span></p>
+        </div>
     </div>
 </form>
 
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <script>
+
+
 $(document).ready(function() {
     // Filtrlar o‘zgarganda ma'lumotlarni AJAX orqali yangilash
     $(".search-input, .search-select").on("keyup change", function() {
@@ -61,6 +67,7 @@ $(document).ready(function() {
             },
             success: function(data) {
                 $("tbody").html($(data).find("tbody").html());
+                $("#total-count").text($(data).find("#total-count").text());
             },
             error: function(xhr, status, error) {
                 console.log("Xatolik:", error);

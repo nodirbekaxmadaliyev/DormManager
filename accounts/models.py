@@ -131,7 +131,6 @@ class CustomUser(AbstractUser):
                 code='Parol juda qisqa'
             )
 
-
 @receiver(pre_delete, sender=CustomUser)
 def delete_user_photo(sender, instance, **kwargs):
     """Hodim o'chirilganda uning suratini ham o'chiramiz"""
