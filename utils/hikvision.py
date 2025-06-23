@@ -26,7 +26,6 @@ def update_dormitory_status():
         start_time = datetime.now(tz) - timedelta(minutes=5)
 
     end_time = datetime.now(tz)
-    # Naive datetime'larni tz-aware qilish
     if start_time.tzinfo is None:
         start_time = tz.localize(start_time)
     if end_time.tzinfo is None:
@@ -37,6 +36,7 @@ def update_dormitory_status():
 
     all_logs = []
     errors = []
+    all_devices_success = True  # 👉 Har bir qurilma muvaffaqiyatli javob bergan bo‘lishi kerak
 
     for dormitory in Dormitory.objects.all():
         for device in dormitory.devices.all():
@@ -47,6 +47,8 @@ def update_dormitory_status():
             }
             search_position = 0
             max_results = 20
+
+            device_success = False  # 👉 Har bir device uchun flag
 
             while True:
                 payload = {
@@ -64,11 +66,14 @@ def update_dormitory_status():
                 }
 
                 try:
-                    response = requests.post(url, json=payload, headers=headers,
-                                             auth=HTTPDigestAuth(device.username, device.password), timeout=10)
+                    response = requests.post(
+                        url, json=payload, headers=headers,
+                        auth=HTTPDigestAuth(device.username, device.password), timeout=10
+                    )
 
                     if response.status_code != 200:
                         errors.append(f"{device.ipaddress} — Status code: {response.status_code}")
+                        all_devices_success = False  # ❌ bitta qurilmadan ham xato bo‘lsa, umumiy success false bo‘ladi
                         break
 
                     data = response.json()
@@ -112,11 +117,16 @@ def update_dormitory_status():
 
                 except Exception as e:
                     errors.append(f"{device.ipaddress} — Xatolik: {str(e)}")
+                    all_devices_success = False
                     break
 
-    # Vaqtni yangilash (agar doimiy saqlash kerak bo‘lsa, DB orqali qilish tavsiya)
-    new_last_time = (end_time - timedelta(minutes=3)).strftime("%Y-%m-%d %H:%M")
-    SystemConfig.set("LAST_UPDATE_TIME", new_last_time)
+            # Agar butunlay hech qanday javob bo‘lmagan bo‘lsa — bu ham xatolik deb hisoblanadi
+
+    # ✅ Faqat barcha qurilmalardan muvaffaqiyatli javob bo‘lsa, update time ni saqlash
+    if all_devices_success:
+        new_last_time = (end_time - timedelta(minutes=3)).strftime("%Y-%m-%d %H:%M")
+        SystemConfig.set("LAST_UPDATE_TIME", new_last_time)
+
     return all_logs, errors
 
 def add_user_to_devices(dormitory: Dormitory, employee_id: str, full_name: str, image_path: str) -> tuple[bool, str | None]:

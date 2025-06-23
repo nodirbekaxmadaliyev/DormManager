@@ -73,12 +73,7 @@
                             <small class="text-muted">Agar talaba ketayotgan bo'lsa, sanani kiriting</small>
                         </div>
                         
-                        <!-- To'lov miqdori -->
-                        <div class="mb-3">
-                            <label for="{{ form.total_payment.id_for_label }}" class="form-label">To'lov miqdori (so'm)</label>
-                            <input type="number" class="form-control" id="{{ form.total_payment.id_for_label }}" 
-                                   name="{{ form.total_payment.name }}" value="{{ form.total_payment.value|default_if_none:0 }}" min="0">
-                        </div>
+
                     </div>
                 </div>
                 

@@ -63,11 +63,11 @@ class Student(models.Model):
     parent_login = models.CharField(max_length=150, unique=True, editable=False)
     parent_password = models.CharField(max_length=20, editable=True)
     image = models.ImageField(upload_to=student_image_upload_to, null=True, blank=True)
-    contract_number = models.CharField(max_length=50)
-    contract_date = models.DateField()
-    arrival_time = models.DateField()
+    contract_number = models.CharField(max_length=50, null=True, blank=True)
+    contract_date = models.DateField(null=True, blank=True)
+    arrival_time = models.DateField(null=True, blank=True)
     checkout_time = models.DateField(null=True, blank=True)
-    total_payment = models.PositiveIntegerField()
+    total_payment = models.PositiveIntegerField(null=True, blank=True, default=0)
 
     def save(self, *args, **kwargs):
         # Agar rasm yangilansa, eski faylni o'chirish

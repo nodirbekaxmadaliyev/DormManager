@@ -28,13 +28,18 @@ class DirectorAccessMixin(UserPassesTestMixin):
     def handle_no_permission(self):
         return HttpResponseForbidden("Sizda bu sahifaga kirish huquqi yo‘q.")
 
+
 class EmployeePage(LoginRequiredMixin, DirectorAccessMixin, ListView):
     model = Employee
     template_name = 'accounts/employees.html'
     context_object_name = 'employees'
 
     def dispatch(self, request, *args, **kwargs):
-        update_dormitory_status()  # ⚠️ Har bir requestda yangilanadi
+        _, errors = update_dormitory_status()
+        if errors:
+            request.session["device_errors"] = errors
+        else:
+            request.session.pop("device_errors", None)
         return super().dispatch(request, *args, **kwargs)
 
     def get_queryset(self):
@@ -107,6 +112,7 @@ class EmployeePage(LoginRequiredMixin, DirectorAccessMixin, ListView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context["total_count"] = self.get_queryset().count()
+        context["device_errors"] = self.request.session.pop("device_errors", None)
         return context
 
     def render_to_response(self, context, **response_kwargs):

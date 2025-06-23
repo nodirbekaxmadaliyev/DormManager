@@ -21,17 +21,13 @@ class StudentListView(ListView):
     paginate_by = 20
 
     def dispatch(self, request, *args, **kwargs):
-        update_dormitory_status()  # ⚠️ Talabalar sahifasiga kirilganda yangilanadi
+        _, errors = update_dormitory_status()
+        if errors:
+            request.session["device_errors"] = errors
+        else:
+            request.session.pop("device_errors", None)
         return super().dispatch(request, *args, **kwargs)
 
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        user = self.request.user
-
-        # Foydalanuvchi direktor bo‘lsa, unga tegishli yotoqxonalarni qo‘shish
-        if hasattr(user, 'director'):
-            context['dormitories'] = Dormitory.objects.filter(director=user.director)
-        return context
 
     def get_queryset(self):
         queryset = super().get_queryset()
@@ -110,6 +106,11 @@ class StudentListView(ListView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context["total_count"] = self.get_queryset().count()
+        context["device_errors"] = self.request.session.pop("device_errors", None)
+
+        user = self.request.user
+        if hasattr(user, 'director'):
+            context['dormitories'] = Dormitory.objects.filter(director=user.director)
         return context
 
     def render_to_response(self, context, **response_kwargs):
@@ -150,7 +151,7 @@ class StudentDetailView(DetailView):
 class StudentUpdateView(UpdateView):
     model = Student
     template_name = 'student/student_update.html'
-    fields = ['room', 'faculty', 'phone_number', 'is_in_dormitory', 'checkout_time', 'total_payment']
+    fields = ['room', 'faculty', 'phone_number', 'is_in_dormitory', 'checkout_time']
     def get_success_url(self):
         return reverse('student_detail', kwargs={'pk': self.object.pk})
 
@@ -184,7 +185,7 @@ class StudentCreateForm(forms.ModelForm):
             'phone_number', 'is_in_dormitory', 'image',
             'contract_number', 'contract_date',
             'arrival_time', 'checkout_time',
-            'total_payment', 'parent_full_name'
+            'parent_full_name'
         ]
 
     def __init__(self, *args, **kwargs):
