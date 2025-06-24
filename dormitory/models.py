@@ -5,7 +5,11 @@ class Dormitory(models.Model):
     director = models.ForeignKey(Director, on_delete=models.CASCADE, related_name='dormitories')
     name = models.CharField(max_length=300, blank=False)
     address = models.CharField(max_length=300, blank=False)
-
+    monthly_payment = models.PositiveIntegerField(default=0, verbose_name="Oylik to‘lov miqdori (so'm)")
+    default_monthly_payment = models.PositiveIntegerField(
+        default=1,
+        help_text="Shartnomaga asosan boshlang‘ich oylik to‘lov (so‘mda)"
+    )
     def __str__(self):
         return self.name
 

@@ -3,6 +3,8 @@
 <head>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.5/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-SgOJa3DmI69IUzQ2PVdRZhwQ+dy64/BUtbMJw1MZ8t5HZApcHrRKUc4W0kG879m7" crossorigin="anonymous">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <!-- Select2 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta charset="UTF-8">
     <title>DormManager</title>
@@ -63,13 +65,27 @@
     </button>
 
     <!-- Katta ekranlar uchun menyu -->
-    <div class="d-none d-lg-flex gap-3">
-      {% if user.role == 'director' %}
-      <a class="nav-link" href="{% url 'employees' %}"><strong>Hodimlar</strong></a>
-      {% endif %}
-      <a class="nav-link" href="{% url 'students' %}"><strong>Talabalar</strong></a>
-      <a class="nav-link" href="{% url 'logs' %}"><strong>Loglar</strong></a>
-    </div>
+    <div class="d-none d-lg-flex gap-3 align-items-center">
+
+  {% if user.role == 'director' %}
+  <a class="nav-link" href="{% url 'dormitories' %}">🏠 Yotoqxonalar</a>
+  <a class="nav-link" href="{% url 'employees' %}"><strong>👨‍💼 Hodimlar</strong></a>
+  {% endif %}
+  <a class="nav-link" href="{% url 'students' %}"><strong>🎓 Talabalar</strong></a>
+
+  <div class="nav-item dropdown">
+    <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+      <strong>💳 To‘lov</strong>
+    </a>
+    <ul class="dropdown-menu">
+      <li><a class="dropdown-item link-primary" href="{% url 'payments' %}"><strong>💳 To‘lovlar</strong></a></li>
+      <li><a class="dropdown-item link-success" href="{% url 'debt_statistics' %}"><strong>📊 Statistika</strong></a></li>
+    </ul>
+  </div>
+
+  <a class="nav-link" href="{% url 'logs' %}"><strong>📋 Loglar</strong></a>
+</div>
+
 
   </div>
 </nav>
@@ -83,12 +99,24 @@
     <ul class="navbar-nav">
       {% if user.role == 'director' %}
       <li class="nav-item">
+        <a class="nav-link" href="{% url 'dormitories' %}">🏠 Yotoqxona hisobi</a>
+      </li>
+      <li class="nav-item">
         <a class="nav-link" href="{% url 'employees' %}">👨‍💼 Hodimlar</a>
       </li>
       {% endif %}
       <li class="nav-item">
         <a class="nav-link" href="{% url 'students' %}">🎓 Talabalar</a>
       </li>
+      <li class="nav-item dropdown">
+          <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+            <strong>💳 To'lov</strong>
+          </a>
+          <ul class="dropdown-menu">
+            <li><a class="dropdown-item link-primary link-offset-2 link-underline-opacity-25 link-underline-opacity-100-hover" style="color: gold;" href="{% url 'payments' %}"><strong>💳 To'lovlar</strong></a></li>
+            <li><a class="dropdown-item link-success link-offset-2 link-underline-opacity-25 link-underline-opacity-100-hover" style="color: gold;" href="{% url 'debt_statistics' %}"><strong>📊 Statistika</strong></a></li>
+          </ul>
+        </li>
       <li class="nav-item">
         <a class="nav-link" href="{% url 'logs' %}">📋 Loglar</a>
       </li>
@@ -115,7 +143,7 @@
 
         <!-- User Full Name -->
         <h4>{{ user.first_name }} {{ user.last_name }}</h4>
-
+        <h6>{{ user.username }}</h6>
         <!-- User Role -->
         <p class="text-muted">{{ user.get_role_display }}</p>
 
@@ -199,5 +227,8 @@
 {% block content %}
 {% endblock %}
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.5/dist/js/bootstrap.bundle.min.js" integrity="sha384-k6d4wzSIapyDyv1kpU366/PK5hCdSbCRGRCMv+eplOQJWyd1fbcAu9OCUj5zNLiq" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+{% block extra_scripts %}{% endblock %}
+
 </body>
 </html>

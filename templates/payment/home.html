@@ -1,0 +1,159 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block content %}
+
+<div class="container mt-3">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h2 class="text-center flex-grow-1">To‘lovlar</h2>
+        <div>
+            <button class="btn btn-success" data-bs-toggle="modal" data-bs-target="#addPaymentModal">Qo‘shish</button>
+            <button id="export-btn" class="btn btn-primary">Yuklash</button>
+        </div>
+    </div>
+</div>
+
+<div class="container mt-3">
+    <form id="search-form" method="get">
+        <div class="table-responsive">
+            <table class="table table-striped">
+                <thead>
+                    <tr>
+                        <th>Talaba</th>
+                        <th>To‘lov miqdori</th>
+                        <th>Qo‘shgan foydalanuvchi</th>
+                        <th>Amal</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for payment in object_list %}
+                    <tr>
+                        <td>{{ payment.student_name }}</td>
+                        <td>{{ payment.amount }} so‘m</td>
+                        <td>{{ payment.added_by.get_full_name }}</td>
+                        <td>
+                            {% if payment.student %}
+                            <a href="{% url 'student_detail' payment.student.id %}" class="btn btn-sm btn-info">Batafsil</a>
+                            {% else %}
+                            <span class="text-muted">O‘chirilgan</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="4" class="text-center">Hech qanday to‘lov topilmadi</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+
+            <div class="container mt-2 mb-2">
+                <p><strong>Topilgan to‘lovlar soni:</strong> <span id="total-count">{{ total_count }}</span></p>
+            </div>
+        </div>
+    </form>
+
+    {% if is_paginated %}
+    <nav class="mt-3">
+        <ul class="pagination justify-content-center">
+            {% if page_obj.has_previous %}
+            <li class="page-item">
+                <a class="page-link" href="?page={{ page_obj.previous_page_number }}">«</a>
+            </li>
+            {% endif %}
+
+            {% for num in page_obj.paginator.page_range %}
+            <li class="page-item {% if page_obj.number == num %}active{% endif %}">
+                <a class="page-link" href="?page={{ num }}">{{ num }}</a>
+            </li>
+            {% endfor %}
+
+            {% if page_obj.has_next %}
+            <li class="page-item">
+                <a class="page-link" href="?page={{ page_obj.next_page_number }}">»</a>
+            </li>
+            {% endif %}
+        </ul>
+    </nav>
+    {% endif %}
+</div>
+
+<!-- To‘lov qo‘shish uchun modal (oldin berilgan shakl) -->
+<div class="modal fade" id="addPaymentModal" tabindex="-1" aria-labelledby="addPaymentLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <form id="payment-form">
+        <div class="modal-header">
+          <h5 class="modal-title" id="addPaymentLabel">Yangi to‘lov</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Yopish"></button>
+        </div>
+        <div class="modal-body">
+          <div class="mb-3">
+            <label for="student" class="form-label">Talaba</label>
+            <select name="student" id="student" class="form-select select2-field" required>
+              {% for student in students %}
+                <option value="{{ student.id }}">{{ student.first_name }} {{ student.last_name }} ({{ student.room }})</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="mb-3">
+            <label for="amount" class="form-label">To‘lov miqdori</label>
+            <input type="number" name="amount" class="form-control" id="amount" required>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="submit" class="btn btn-primary">Saqlash</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- AJAX va eksport skriptlari -->
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+
+
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+$(document).ready(function() {
+    // Select2 ishga tushurish
+    $('.select2-field').select2({
+        dropdownParent: $('#addPaymentModal'),
+        placeholder: "Talabani qidiring...",
+        allowClear: true,
+        minimumInputLength: 1
+    });
+
+    // AJAX orqali formani yuborish
+    $("#payment-form").on("submit", function (e) {
+        e.preventDefault();
+        const formData = $(this).serialize();
+
+        $.ajax({
+            url: "{% url 'payment_add' %}",
+            method: "POST",
+            data: formData,
+            headers: { "X-CSRFToken": "{{ csrf_token }}" },
+            success: function (response) {
+                if (response.success) {
+                    location.reload();
+                }
+            },
+            error: function (xhr) {
+                alert("Xatolik: " + xhr.responseJSON?.errors?.amount || "Yuborishda xatolik.");
+            }
+        });
+    });
+
+    // Excel eksport qilish
+    $("#export-btn").on("click", function() {
+        const params = $("#search-form").serialize();
+        const url = `{% url 'payments' %}?${params}&export=excel`;
+        window.location.href = url;
+    });
+});
+</script>
+{% endblock %}
+

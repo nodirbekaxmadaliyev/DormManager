@@ -111,8 +111,30 @@ class EmployeePage(LoginRequiredMixin, DirectorAccessMixin, ListView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context["total_count"] = self.get_queryset().count()
+        queryset = self.get_queryset()
+        context["total_count"] = queryset.count()
         context["device_errors"] = self.request.session.pop("device_errors", None)
+
+        # Umumiy xodimlar soni
+        context["all_employee_count"] = Employee.objects.filter(
+            dormitory__director=self.request.user.director
+        ).count()
+
+        # Har bir yotoqxona bo‘yicha statistikalar
+        dormitory_stats = []
+        dormitories = Dormitory.objects.filter(director=self.request.user.director)
+
+        for dorm in dormitories:
+            total = dorm.employees.count()
+            in_dorm = dorm.employees.filter(user__is_in_dormitory=True).count()
+
+            dormitory_stats.append({
+                "name": dorm.name,
+                "total": total,
+                "in_dorm": in_dorm
+            })
+
+        context["dormitory_stats"] = dormitory_stats
         return context
 
     def render_to_response(self, context, **response_kwargs):

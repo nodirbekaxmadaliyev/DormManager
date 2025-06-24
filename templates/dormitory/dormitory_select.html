@@ -1,0 +1,32 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="container mt-4">
+    <h3 class="mb-4 text-center">🏢 Sizga biriktirilgan yotoxonalar</h3>
+
+    <div class="row">
+        {% for dorm in dormitories %}
+        <div class="col-md-6 col-lg-4 mb-4">
+            <div class="card h-100 shadow-sm border-primary">
+                <div class="card-body">
+                    <h5 class="card-title text-primary">
+                        🏠 {{ dorm.name }}
+                    </h5>
+                    <p class="card-text">
+                        <strong>📍 Manzili:</strong> {{ dorm.address }}<br>
+                        <strong>💰 Oylik to‘lov:</strong> {{ dorm.monthly_payment|floatformat:0 }} so‘m<br>
+                        <strong>🕒 Boshlang‘ich oylar soni:</strong> {{ dorm.default_monthly_payment }}
+                    </p>
+                    <a href="{% url 'dormitory_detail' dorm.id %}" class="btn btn-outline-info w-100">
+                        🔎 Batafsil ko‘rish
+                    </a>
+                </div>
+            </div>
+        </div>
+        {% empty %}
+        <div class="col-12 text-center text-danger">
+            <p>Hech qanday yotoqxona topilmadi.</p>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}

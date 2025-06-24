@@ -12,7 +12,7 @@ import re
 # Create your models here.
 
 class AutoIncrementField(models.PositiveIntegerField):
-    def __init__(self, start_from=1, *args, **kwargs):
+    def __init__(self, start_from=10, *args, **kwargs):
         self.start_from = start_from
         kwargs['editable'] = False
         kwargs['primary_key'] = True
@@ -117,10 +117,11 @@ class CustomUser(AbstractUser):
             self.username = f"{clean_first_name}.{clean_last_name}"
             self.set_password("12345678")
 
-        super().save(*args, **kwargs)
+        super().save(*args, **kwargs)  # Bu yerda pk yaratiladi
 
+        # Usernamega pk ni qo‘shish (faqat yangi foydalanuvchi uchun)
         if is_new:
-            self.username = f"{self.pk}{self.username}"
+            self.username = f"{self.pk}_{self.username}"
             super().save(update_fields=['username'])
 
     def clean(self):
@@ -140,6 +141,7 @@ def delete_user_photo(sender, instance, **kwargs):
 
 class Director(models.Model):
     user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+    
 
     def clean(self):
         if self.user.role != 'director':

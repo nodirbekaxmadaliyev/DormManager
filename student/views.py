@@ -1,4 +1,5 @@
 import tempfile
+from django.db.models import Count, Q
 import os
 from django.views.generic import ListView, DetailView, UpdateView, DeleteView, CreateView
 from django.urls import reverse_lazy, reverse
@@ -28,9 +29,16 @@ class StudentListView(ListView):
             request.session.pop("device_errors", None)
         return super().dispatch(request, *args, **kwargs)
 
-
     def get_queryset(self):
         queryset = super().get_queryset()
+
+        user = self.request.user
+
+        # Foydalanuvchining direktor yoki hodimligiga qarab filtr
+        if hasattr(user, 'director'):
+            queryset = queryset.filter(dormitory__director=user.director)
+        else:
+            queryset = queryset.filter(dormitory__employees__user=user)
 
         # Status filter (ichkarida/tashqarida)
         status = self.request.GET.get('status', '')
@@ -109,8 +117,22 @@ class StudentListView(ListView):
         context["device_errors"] = self.request.session.pop("device_errors", None)
 
         user = self.request.user
+
         if hasattr(user, 'director'):
-            context['dormitories'] = Dormitory.objects.filter(director=user.director)
+            dormitories = Dormitory.objects.filter(director=user.director)
+        else:
+            dormitories = Dormitory.objects.filter(employees__user=user).distinct()
+
+        # Statistikani qurish
+        dormitory_stats = dormitories.annotate(
+            total=Count('students'),
+            in_dorm=Count('students', filter=Q(students__is_in_dormitory=True))
+        )
+
+        context['dormitory_stats'] = dormitory_stats
+        context['all_student_count'] = Student.objects.count() if hasattr(user, 'director') else Student.objects.filter(
+            dormitory__in=dormitories).count()
+        context['dormitories'] = dormitories
         return context
 
     def render_to_response(self, context, **response_kwargs):
