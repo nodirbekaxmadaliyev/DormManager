@@ -3,38 +3,44 @@
 
 <div class="container mt-4">
     <h2 class="mb-4">Qarzdorlik statistikasi</h2>
-    <div class="row mb-3">
-    <div class="col-md-4">
-        <div class="alert alert-primary">
-            <strong>Jami kerakli to‘lov:</strong> {{ total_required|floatformat:0 }} so‘m
-        </div>
-    </div>
-    <div class="col-md-4">
-        <div class="alert alert-success">
-            <strong>Jami to‘langan:</strong> {{ total_paid|floatformat:0 }} so‘m
-        </div>
-    </div>
-    <div class="col-md-4">
-        <div class="alert alert-danger">
-            <strong>Jami qarzdorlik:</strong> {{ total_debt|floatformat:0 }} so‘m
-        </div>
-    </div>
-</div>
 
-    <form method="get" class="row g-3 mb-3">
+
+    <!-- 📊 Statistikalar -->
+    <div class="row mb-3" id="statistics-section">
         <div class="col-md-4">
-            <input type="text" name="q" value="{{ q }}" placeholder="Ismi yoki familiyasi" class="form-control" />
+            <div class="alert alert-primary">
+                <strong>Jami kerakli to‘lov:</strong> <span id="total-required">{{ total_required|floatformat:0 }}</span> so‘m
+            </div>
         </div>
-        <div class="col-md-2 form-check mt-2">
-            <input type="checkbox" name="debtors_only" id="debtors_only" class="form-check-input" {% if debtors_only %}checked{% endif %}>
-            <label class="form-check-label" for="debtors_only">Faqat qarzdorlar</label>
+        <div class="col-md-4">
+            <div class="alert alert-success">
+                <strong>Jami to‘langan:</strong> <span id="total-paid">{{ total_paid|floatformat:0 }}</span> so‘m
+            </div>
         </div>
-        <div class="col-md-2">
-            <button class="btn btn-primary" type="submit">Qidirish</button>
+        <div class="col-md-4">
+            <div class="alert alert-danger">
+                <strong>Jami qarzdorlik:</strong> <span id="total-debt">{{ total_debt|floatformat:0 }}</span> so‘m
+            </div>
+        </div>
+    </div>
+
+    <!-- 🔄 Qidiruv formasi -->
+    <form method="get" class="row g-3 mb-3" id="search-form">
+        <div class="col-md-4">
+            <input type="text" name="q" value="{{ q }}" placeholder="Ismi yoki familiyasi" class="form-control search-input" />
+        </div>
+
+        <div class="col-md-3">
+            <select name="debt_filter" class="form-select search-input">
+                <option value="">Barchasi</option>
+                <option value="debtors" {% if debt_filter == 'debtors' %}selected{% endif %}>Faqat qarzdorlar</option>
+                <option value="no_debt" {% if debt_filter == 'no_debt' %}selected{% endif %}>Faqat qarzi yo‘qlar</option>
+            </select>
         </div>
     </form>
 
-    <div class="table-responsive">
+    <!-- 📋 Jadval -->
+    <div class="table-responsive" id="student-table-section">
         <table class="table table-bordered table-striped">
             <thead>
                 <tr>
@@ -71,5 +77,42 @@
         </table>
     </div>
 </div>
+
+<!-- ✅ AJAX script -->
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script>
+$(document).ready(function () {
+    function fetchStudents() {
+        const formData = $("#search-form").serialize();
+
+        $.ajax({
+            url: "{% url 'debt_statistics' %}",
+            type: "GET",
+            data: formData,
+            headers: {
+                "X-Requested-With": "XMLHttpRequest"
+            },
+            success: function (data) {
+                const html = $("<div>").html(data.table_html);
+
+                // Statistikalar
+                $("#total-required").text(html.find("#total-required").text());
+                $("#total-paid").text(html.find("#total-paid").text());
+                $("#total-debt").text(html.find("#total-debt").text());
+
+                // Jadval
+                $("#student-table-section").html(html.find("#student-table-section").html());
+            },
+            error: function (xhr, status, error) {
+                console.error("Xatolik:", error);
+            }
+        });
+    }
+
+    $(document).on("keyup change", ".search-input", function () {
+        fetchStudents();
+    });
+});
+</script>
 
 {% endblock %}

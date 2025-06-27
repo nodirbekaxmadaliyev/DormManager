@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-
+{% load widget_tweaks %}
 {% block content %}
 <div class="container mt-4">
     <div class="card">
@@ -27,15 +27,18 @@
                 
                 <div class="row">
                     <div class="col-md-6">
-                        <!-- Xona -->
-                        <div class="mb-3">
-                            <label for="{{ form.room.id_for_label }}" class="form-label">Xona</label>
-                            <input type="text" class="form-control" id="{{ form.room.id_for_label }}" 
-                                   name="{{ form.room.name }}" value="{{ form.room.value|default_if_none:'' }}">
-                            {% if form.room.help_text %}
-                            <small class="text-muted">{{ form.room.help_text }}</small>
-                            {% endif %}
-                        </div>
+                        <!-- Yotoqxona -->
+<div class="mb-3">
+    <label for="id_dormitory" class="form-label">Yotoqxona</label>
+    {{ form.dormitory|add_class:"form-select"|attr:"id=id_dormitory" }}
+</div>
+
+<!-- Xona -->
+<div class="mb-3">
+    <label for="id_room" class="form-label">Xona</label>
+    {{ form.room|add_class:"form-select"|attr:"id=id_room" }}
+</div>
+
                         
                         <!-- Fakultet -->
                         <div class="mb-3">
@@ -95,6 +98,30 @@
 document.getElementById('{{ form.is_in_dormitory.id_for_label }}').addEventListener('change', function() {
     const label = document.querySelector(`label[for='{{ form.is_in_dormitory.id_for_label }}']`);
     label.textContent = this.checked ? 'Ichkarida' : 'Tashqarida';
+});
+
+document.addEventListener('DOMContentLoaded', function () {
+    const dormitorySelect = document.getElementById('id_dormitory');
+    const roomSelect = document.getElementById('id_room');
+
+    if (dormitorySelect && roomSelect) {
+        dormitorySelect.addEventListener('change', function () {
+            const dormitoryId = this.value;
+            if (!dormitoryId) return;
+
+            fetch(`/students/ajax/load-rooms/?dormitory=${dormitoryId}`)
+                .then(response => response.json())
+                .then(data => {
+                    roomSelect.innerHTML = '<option value="">Xona tanlang</option>';
+                    data.forEach(room => {
+                        const option = document.createElement('option');
+                        option.value = room.id;
+                        option.textContent = room.number;
+                        roomSelect.appendChild(option);
+                    });
+                });
+        });
+    }
 });
 </script>
 {% endblock %}

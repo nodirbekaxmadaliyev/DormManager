@@ -16,7 +16,7 @@
         <div class="card-body">
             <p><strong>Umumiy kerakli to‘lov:</strong> {{ total_required|floatformat:0 }} so‘m</p>
             <p><strong>Umumiy to‘langan:</strong> {{ total_paid|floatformat:0 }} so‘m</p>
-            <p><strong>Hozirdagi umumiy qarzdorlik:</strong>
+            <p><strong>Hozirdagi qarzdorlik:</strong>
                 {% if total_debt > 0 %}
                 <span class="text-danger">{{ total_debt|floatformat:0 }} so‘m</span>
                 {% else %}

@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Dormitory, Device
+from .models import Dormitory, Device, Room
 
 
 @admin.register(Dormitory)
@@ -21,3 +21,10 @@ class DeviceAdmin(admin.ModelAdmin):
     def dormitory_name(self, obj):
         return obj.dormitory.name
     dormitory_name.short_description = "Yotoqxona"
+
+@admin.register(Room)
+class RoomAdmin(admin.ModelAdmin):
+    list_display = ('number', 'dormitory', 'size')
+    list_filter = ('dormitory',)
+    search_fields = ('number', 'dormitory__name')
+    ordering = ('dormitory__name', 'number')

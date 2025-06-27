@@ -22,3 +22,12 @@ class Device(models.Model):
 
     def __str__(self):
         return f"{self.pk} -> {self.dormitory.name} -> {self.entrance}"
+
+class Room(models.Model):
+    dormitory = models.ForeignKey(Dormitory, on_delete=models.CASCADE, related_name='rooms')
+    number = models.CharField(max_length=5)
+    size = models.PositiveSmallIntegerField()
+
+    def __str__(self):
+        return f"{self.dormitory.name} - {self.number} (sig‘im: {self.size})"
+

@@ -52,30 +52,38 @@
 
                         <!-- Ish boshlanish va tugash -->
                         <div class="row">
-                            <div class="col-md-6 mb-3">
-                                <label for="{{ form.work_start.id_for_label }}" class="form-label">Ish boshlanish vaqti</label>
-                                {{ form.work_start|add_class:"form-control" }}
-                                {% for error in form.work_start.errors %}
-                                    <div class="text-danger small">{{ error }}</div>
-                                {% endfor %}
-                            </div>
-                            <div class="col-md-6 mb-3">
-                                <label for="{{ form.work_end.id_for_label }}" class="form-label">Ish tugash vaqti</label>
-                                {{ form.work_end|add_class:"form-control" }}
-                                {% for error in form.work_end.errors %}
-                                    <div class="text-danger small">{{ error }}</div>
-                                {% endfor %}
-                            </div>
-                        </div>
+    <div class="col-md-6 mb-3">
+        <label for="id_work_start" class="form-label">Ish boshlanish vaqti</label>
+        <input type="time" name="work_start" id="id_work_start"
+               class="form-control"
+               value="{{ form.work_start.value|time:'H:i' }}">
+        {% for error in form.work_start.errors %}
+            <div class="text-danger small">{{ error }}</div>
+        {% endfor %}
+    </div>
 
-                        <!-- Ishga qabul sanasi -->
-                        <div class="mb-3">
-                            <label for="{{ form.hire_date.id_for_label }}" class="form-label">Ishga kirgan sana</label>
-                            {{ form.hire_date|add_class:"form-control" }}
-                            {% for error in form.hire_date.errors %}
-                                <div class="text-danger small">{{ error }}</div>
-                            {% endfor %}
-                        </div>
+    <div class="col-md-6 mb-3">
+        <label for="id_work_end" class="form-label">Ish tugash vaqti</label>
+        <input type="time" name="work_end" id="id_work_end"
+               class="form-control"
+               value="{{ form.work_end.value|time:'H:i' }}">
+        {% for error in form.work_end.errors %}
+            <div class="text-danger small">{{ error }}</div>
+        {% endfor %}
+    </div>
+</div>
+
+<!-- Ishga qabul sanasi -->
+<div class="mb-3">
+    <label for="id_hire_date" class="form-label">Ishga kirgan sana</label>
+    <input type="date" name="hire_date" id="id_hire_date"
+           class="form-control"
+           value="{{ form.hire_date.value|date:'Y-m-d' }}">
+    {% for error in form.hire_date.errors %}
+        <div class="text-danger small">{{ error }}</div>
+    {% endfor %}
+</div>
+
 
                         <!-- Surat yuklash -->
                         <div class="mb-3">

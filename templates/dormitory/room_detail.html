@@ -1,0 +1,52 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="container mt-4">
+    <h2>Xona raqami: {{ room.number }}</h2>
+    <p><strong>Yotoqxona:</strong> {{ room.dormitory.name }}</p>
+    <p><strong>Sig‘imi:</strong> {{ room.size }}</p>
+    <p><strong>Band talabalar:</strong> {{ students|length }}</p>
+    <p><strong>Bo‘sh o‘rinlar:</strong> {{ empty_slots }}</p>
+
+    <h4 class="mt-4">Talabalar ro‘yxati:</h4>
+    {% if students %}
+    <ul class="list-group">
+        {% for student in students %}
+        <li class="list-group-item">{{ student.first_name }} {{ student.last_name }}</li>
+        {% endfor %}
+    </ul>
+    {% else %}
+    <p class="text-muted">Bu xonaga hali talaba biriktirilmagan.</p>
+    {% endif %}
+
+    <div class="mt-4 d-flex gap-2">
+        <a href="{% url 'room_update' room.id %}" class="btn btn-warning">✏️ Tahrirlash</a>
+        <!-- O'chirish tugmasi -->
+        <button type="button" class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#deleteModal">
+            🗑️ O'chirish
+        </button>
+        <a href="{% url 'rooms' %}" class="btn btn-secondary">🔙 Orqaga</a>
+    </div>
+</div>
+
+<!-- Delete Modal -->
+<div class="modal fade" id="deleteModal" tabindex="-1" aria-labelledby="deleteModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <form method="post" action="{% url 'room_delete' room.id %}">
+        {% csrf_token %}
+        <div class="modal-header">
+          <h5 class="modal-title" id="deleteModalLabel">Xonani o‘chirish</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Yopish"></button>
+        </div>
+        <div class="modal-body">
+          Siz rostdan ham <strong>{{ room.number }}</strong> xonasini o‘chirmoqchimisiz?
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Bekor qilish</button>
+          <button type="submit" class="btn btn-danger">Ha, o‘chirish</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}

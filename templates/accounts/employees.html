@@ -92,11 +92,10 @@
 
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <script>
-
 $(document).ready(function () {
     // Sahifa to‘liq yuklangach modalni yashiramiz
     $("#loading-modal").fadeOut("slow", function () {
-        $(this).remove(); // DOM'dan olib tashlash (ixtiyoriy)
+        $(this).remove(); // DOMdan tozalash, boshqa modallarga halaqit bermaydi
     });
 
     // AJAX qidiruvlar (sizda bu bor edi)

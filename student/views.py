@@ -3,8 +3,8 @@ from django.db.models import Count, Q
 import os
 from django.views.generic import ListView, DetailView, UpdateView, DeleteView, CreateView
 from django.urls import reverse_lazy, reverse
-from django import forms
-from dormitory.models import Dormitory
+from .forms import StudentCreateForm
+from dormitory.models import Dormitory, Room
 from .models import Student
 import pandas as pd
 from django.http import HttpResponse
@@ -14,6 +14,9 @@ from utils.hikvision import add_user_to_devices, delete_user_from_devices, updat
 from django.contrib import messages
 from django.shortcuts import render, redirect
 from django.contrib.auth.mixins import LoginRequiredMixin
+from django.http import JsonResponse
+from django.db import models
+from django.db.models import Count
 
 class StudentListView(ListView):
     model = Student
@@ -170,17 +173,25 @@ class StudentDetailView(DetailView):
     template_name = 'student/student_detail.html'
     context_object_name = 'student'
 
-class StudentUpdateView(UpdateView):
+class StudentUpdateView(LoginRequiredMixin, UpdateView):
     model = Student
     template_name = 'student/student_update.html'
-    fields = ['room', 'faculty', 'phone_number', 'is_in_dormitory', 'checkout_time']
-    def get_success_url(self):
-        return reverse('student_detail', kwargs={'pk': self.object.pk})
+    form_class = StudentCreateForm  # fields o‘rniga forma klassidan foydalanamiz
+    success_url = None  # get_success_url ishlaydi
+
+    def get_form_kwargs(self):
+        kwargs = super().get_form_kwargs()
+        kwargs['user'] = self.request.user  # Formaga foydalanuvchini yuborish
+        return kwargs
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['title'] = "Talaba ma'lumotlarini tahrirlash"
         return context
+
+    def get_success_url(self):
+        return reverse('student_detail', kwargs={'pk': self.object.pk})
+
 
 class StudentDeleteView(DeleteView):
     model = Student
@@ -199,28 +210,6 @@ class StudentDeleteView(DeleteView):
 
         return super().delete(request, *args, **kwargs)
 
-class StudentCreateForm(forms.ModelForm):
-    class Meta:
-        model = Student
-        fields = [
-            'first_name', 'last_name', 'faculty', 'dormitory', 'room',
-            'phone_number', 'is_in_dormitory', 'image',
-            'contract_number', 'contract_date',
-            'arrival_time', 'checkout_time',
-            'parent_full_name'
-        ]
-
-    def __init__(self, *args, **kwargs):
-        user = kwargs.pop('user', None)
-        super().__init__(*args, **kwargs)
-        if user:
-            if hasattr(user, 'director'):
-                self.fields['dormitory'].queryset = Dormitory.objects.filter(director__user=user)
-            elif hasattr(user, 'employee'):
-                self.fields['dormitory'].queryset = Dormitory.objects.filter(pk=user.employee.dormitory.pk)
-            else:
-                self.fields['dormitory'].queryset = Dormitory.objects.none()
-
 class StudentCreateView(LoginRequiredMixin, CreateView):
     model = Student
     template_name = 'student/student_add.html'
@@ -229,20 +218,20 @@ class StudentCreateView(LoginRequiredMixin, CreateView):
 
     def get_form_kwargs(self):
         kwargs = super().get_form_kwargs()
-        kwargs['user'] = self.request.user  # Foydalanuvchini forma ichiga yuboramiz
+        kwargs['user'] = self.request.user  # Foydalanuvchini forma ichiga yuborish
         return kwargs
 
     def form_valid(self, form):
         student = form.save(commit=False)
-
         photo_file = form.cleaned_data.get('image')
         full_name = f"{form.cleaned_data['first_name']} {form.cleaned_data['last_name']}"
         dormitory = form.cleaned_data.get('dormitory')
+
         if not photo_file:
             messages.error(self.request, "Surat yuklanmagan. Iltimos, rasmni tanlang.")
             return render(self.request, self.template_name, {'form': form})
 
-        # Vaqtinchalik fayl yaratish (fayl tizimiga saqlamasdan)
+        # Rasmni vaqtinchalik saqlash
         with tempfile.NamedTemporaryFile(delete=False, suffix='.jpg') as tmp:
             for chunk in photo_file.chunks():
                 tmp.write(chunk)
@@ -252,7 +241,6 @@ class StudentCreateView(LoginRequiredMixin, CreateView):
 
         success, reason = add_user_to_devices(dormitory, str(student.id), full_name, tmp_file_path)
 
-        # Temp faylni o'chiramiz
         if os.path.exists(tmp_file_path):
             os.remove(tmp_file_path)
 
@@ -267,3 +255,13 @@ class StudentCreateView(LoginRequiredMixin, CreateView):
     def form_invalid(self, form):
         messages.error(self.request, "Ma'lumotlarda xatolik mavjud.")
         return super().form_invalid(form)
+
+def load_rooms_ajax(request):
+    dormitory_id = request.GET.get('dormitory')
+    rooms = Room.objects.filter(dormitory_id=dormitory_id)
+
+    # Faqat to‘liq band bo‘lmagan xonalar
+    rooms = rooms.annotate(occupied=Count('students')).filter(occupied__lt=models.F('size'))
+
+    return JsonResponse(list(rooms.values('id', 'number')), safe=False)
+

@@ -1,21 +1,31 @@
-from django.http import HttpResponse
-import pandas as pd
-from datetime import datetime
 from django.views.generic.edit import CreateView
-from django.http import JsonResponse
 from django.contrib.auth.mixins import LoginRequiredMixin
-from .models import Payment
-from django.views import View
-from django.views.generic import ListView
 from student.models import Student
-from django.db.models import Q
 from datetime import date
 from dateutil.relativedelta import relativedelta
+from django.views.generic import ListView
+from django.views import View
+from django.http import JsonResponse, HttpResponse
+from django.template.loader import render_to_string
+from django.db.models import Q
+from datetime import datetime
+import pandas as pd
+from .models import Payment, Student
 
 class DebtStatisticsView(ListView):
     model = Student
     template_name = 'payment/statistics.html'
     context_object_name = 'students'
+
+    def get(self, request, *args, **kwargs):
+        self.object_list = self.get_queryset()
+        context = self.get_context_data()
+
+        if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+            html = render_to_string("payment/statistics.html", context, request=request)
+            return JsonResponse({'table_html': html})
+
+        return super().get(request, *args, **kwargs)
 
     def get_queryset(self):
         user = self.request.user
@@ -29,11 +39,12 @@ class DebtStatisticsView(ListView):
 
         queryset = Student.objects.filter(dormitory__in=dormitories)
 
-        q = self.request.GET.get('q', '')
+        q = self.request.GET.get('q', '').strip()
+        debt_filter = self.request.GET.get('debt_filter', '')  # new
+
         if q:
             queryset = queryset.filter(Q(first_name__icontains=q) | Q(last_name__icontains=q))
 
-        debtors_only = self.request.GET.get('debtors_only')
         results = []
         today = date.today()
 
@@ -43,7 +54,7 @@ class DebtStatisticsView(ListView):
 
             checkout = student.checkout_time or today
             delta = relativedelta(checkout, student.arrival_time)
-            months_passed = delta.years * 12 + delta.months + 1  # +1 oyning o'zi uchun
+            months_passed = delta.years * 12 + delta.months + 1
 
             monthly = student.dormitory.monthly_payment or 0
             min_required_months = student.dormitory.default_monthly_payment or 0
@@ -51,30 +62,39 @@ class DebtStatisticsView(ListView):
             paid_total = student.total_payment or 0
             required_total = months_passed * monthly
 
-
             delta = relativedelta(today, student.arrival_time)
             delta_month = delta.years * 12 + delta.months + 1 - min_required_months
             if delta_month <= 0:
                 debt = required_total - paid_total
             else:
-                debt = (min_required_months + delta_month)  * monthly - paid_total
+                debt = (min_required_months + delta_month) * monthly - paid_total
 
-            if not debtors_only or (debtors_only and debt > 0):
+            debt = max(debt, 0)
+
+            # ✅ Filter logikasi
+            if (
+                    debt_filter == 'debtors' and debt > 0
+                    or debt_filter == 'no_debt' and debt == 0
+                    or debt_filter == ''
+            ):
                 student.months_passed = months_passed
                 student.required_total = required_total
                 student.paid_total = paid_total
-                student.debt = max(debt, 0)
+                student.debt = debt
                 results.append(student)
 
         return results
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
+
+        # Qidiruv qiymatlari
         context['q'] = self.request.GET.get('q', '')
-        context['debtors_only'] = self.request.GET.get('debtors_only', '')
+        context['debt_filter'] = self.request.GET.get('debt_filter', '')  # 🔄 yangi parametr
 
-        students = context['students']
+        students = context['students']  # queryset'dan qaytgan tayyor ro‘yxat
 
+        # Statistikalar
         total_required = sum(s.required_total for s in students)
         total_paid = sum(s.paid_total for s in students)
         total_debt = sum(s.debt for s in students)
@@ -113,6 +133,101 @@ class StudentSearchAPIView(View):
         ]
         return JsonResponse({"results": results})
 
+class PaymentListView(ListView):
+    model = Payment
+    template_name = 'payment/home.html'
+    context_object_name = 'object_list'
+    paginate_by = 20
+
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        user = self.request.user
+
+        if hasattr(user, 'employee'):
+            queryset = queryset.filter(student__dormitory=user.employee.dormitory)
+        elif hasattr(user, 'director'):
+            dormitories = user.director.dormitories.all()
+            queryset = queryset.filter(student__dormitory__in=dormitories)
+
+        # 🔍 Qidiruv parametrlari
+        student_name = self.request.GET.get('student_name', '').strip()
+        amount = self.request.GET.get('amount', '').strip()
+        added_by = self.request.GET.get('added_by', '').strip()
+
+        if student_name:
+            queryset = queryset.filter(student_name__icontains=student_name)
+
+        if amount:
+            queryset = queryset.filter(amount__icontains=amount)  # matn sifatida
+
+        if added_by:
+            queryset = queryset.filter(
+                Q(added_by__first_name__icontains=added_by) |
+                Q(added_by__last_name__icontains=added_by)
+            )
+
+        return queryset.order_by('-add_time')
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['total_count'] = self.get_queryset().count()
+
+        context['student_name'] = self.request.GET.get('student_name', '')
+        context['amount'] = self.request.GET.get('amount', '')
+        context['added_by'] = self.request.GET.get('added_by', '')
+
+        user = self.request.user
+        if hasattr(user, 'director'):
+            dormitories = user.director.dormitories.all()
+            context['students'] = Student.objects.filter(dormitory__in=dormitories)
+        elif hasattr(user, 'employee'):
+            context['students'] = Student.objects.filter(dormitory=user.employee.dormitory)
+        else:
+            context['students'] = Student.objects.none()
+
+        return context
+
+    def get(self, request, *args, **kwargs):
+        if request.GET.get("export") == "excel":
+            return self.export_to_excel()
+
+        self.object_list = self.get_queryset()
+        context = self.get_context_data()
+
+        if request.headers.get("x-requested-with") == "XMLHttpRequest":
+            html = render_to_string("payment/_payments_table.html", context, request=request)
+            return HttpResponse(html)
+
+        return self.render_to_response(context)
+
+    def export_to_excel(self):
+        queryset = self.get_queryset()
+
+        df = pd.DataFrame(list(queryset.values(
+            'student__first_name', 'student__last_name', 'student__room',
+            'amount', 'add_time'
+        )))
+
+        df.index += 1
+        df.insert(0, '№', df.index)
+
+        df.rename(columns={
+            'student__first_name': 'Ismi',
+            'student__last_name': 'Familiyasi',
+            'student__room': 'Xonasi',
+            'amount': 'To‘lov miqdori',
+            'add_time': 'Qo‘shilgan vaqt'
+        }, inplace=True)
+
+        df['Qo‘shilgan vaqt'] = pd.to_datetime(df['Qo‘shilgan vaqt']).dt.strftime('%Y-%m-%d %H:%M')
+
+        now = datetime.now().strftime("%Y-%m-%d_%H-%M")
+        filename = f"tolovlar_{now}.xlsx"
+
+        response = HttpResponse(content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+        response['Content-Disposition'] = f'attachment; filename={filename}'
+        df.to_excel(response, index=False)
+        return response
 
 class PaymentCreateView(LoginRequiredMixin, CreateView):
     model = Payment
@@ -152,99 +267,5 @@ class PaymentCreateView(LoginRequiredMixin, CreateView):
 
     def form_invalid(self, form):
         return JsonResponse({'success': False, 'errors': form.errors}, status=400)
-
-class PaymentListView(ListView):
-    model = Payment
-    template_name = 'payment/home.html'
-    context_object_name = 'object_list'
-    paginate_by = 20
-
-    def get_queryset(self):
-        queryset = super().get_queryset()
-        user = self.request.user
-
-        # Ruxsat doirasida cheklash
-        if hasattr(user, 'employee'):
-            dormitory = user.employee.dormitory
-            queryset = queryset.filter(student__dormitory=dormitory)
-
-        elif hasattr(user, 'director'):
-            dormitories = user.director.dormitories.all()
-            queryset = queryset.filter(student__dormitory__in=dormitories)
-
-        # Admin yoki boshqa holatlarda hammasi ko‘rinadi
-
-        # Filtirlash
-        student_name = self.request.GET.get('student_name', '')
-        min_amount = self.request.GET.get('min_amount', '')
-        max_amount = self.request.GET.get('max_amount', '')
-
-        if student_name:
-            queryset = queryset.filter(student_name__icontains=student_name)
-
-        if min_amount:
-            try:
-                queryset = queryset.filter(amount__gte=float(min_amount))
-            except ValueError:
-                pass
-
-        if max_amount:
-            try:
-                queryset = queryset.filter(amount__lte=float(max_amount))
-            except ValueError:
-                pass
-
-        return queryset.order_by('-add_time')
-
-    def get(self, request, *args, **kwargs):
-        if request.GET.get("export") == "excel":
-            return self.export_to_excel()
-
-        return super().get(request, *args, **kwargs)
-
-    def export_to_excel(self):
-        queryset = self.get_queryset()
-
-        df = pd.DataFrame(list(queryset.values(
-            'student__first_name', 'student__last_name', 'student__room',
-            'amount', 'add_time'
-        )))
-
-        df.index += 1
-        df.insert(0, '№', df.index)
-
-        df.rename(columns={
-            'student__first_name': 'Ismi',
-            'student__last_name': 'Familiyasi',
-            'student__room': 'Xonasi',
-            'amount': 'To‘lov miqdori',
-            'add_time': 'Qo‘shilgan vaqt'
-        }, inplace=True)
-
-        df['Qo‘shilgan vaqt'] = pd.to_datetime(df['Qo‘shilgan vaqt']).dt.strftime('%Y-%m-%d %H:%M')
-
-        now = datetime.now().strftime("%Y-%m-%d_%H-%M")
-        filename = f"tolovlar_{now}.xlsx"
-
-        response = HttpResponse(content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
-        response['Content-Disposition'] = f'attachment; filename={filename}'
-        df.to_excel(response, index=False)
-        return response
-
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        context['total_count'] = self.get_queryset().count()
-
-        user = self.request.user
-        if hasattr(user, 'director'):
-            dormitories = user.director.dormitories.all()
-            context['students'] = Student.objects.filter(dormitory__in=dormitories)
-        elif hasattr(user, 'employee'):
-            dormitory = user.employee.dormitory
-            context['students'] = Student.objects.filter(dormitory=dormitory)
-        else:
-            context['students'] = Student.objects.none()
-
-        return context
 
 
