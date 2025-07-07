@@ -1,44 +1,43 @@
-import pytz
-from Logs.models import SystemConfig
-from datetime import datetime, timedelta
+
 from dormitory.models import Dormitory
 import os
 import urllib3
-from accounts.models import CustomUser
-from student.models import Student
-import requests
-from requests.auth import HTTPDigestAuth
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
-def update_dormitory_status():
+from datetime import datetime, timedelta
+import pytz
+import requests
+from requests.auth import HTTPDigestAuth
+from accounts.models import CustomUser
+from student.models import Student
+
+def update_dormitory_status(dormitories):
     tz = pytz.timezone("Asia/Tashkent")
 
-    last_time_str = SystemConfig.get("LAST_UPDATE_TIME", default=None)
+    all_logs = []
+    errors = []
 
-    if last_time_str:
+    for dormitory in dormitories:
+        last_time_str = str(dormitory.last_update_time) if dormitory.last_update_time else ""
+
         try:
             start_time = datetime.strptime(last_time_str, "%Y-%m-%d %H:%M")
             if start_time.tzinfo is None:
                 start_time = tz.localize(start_time)
-        except Exception:
+        except:
             start_time = datetime.now(tz) - timedelta(minutes=5)
-    else:
-        start_time = datetime.now(tz) - timedelta(minutes=5)
 
-    end_time = datetime.now(tz)
-    if start_time.tzinfo is None:
-        start_time = tz.localize(start_time)
-    if end_time.tzinfo is None:
-        end_time = tz.localize(end_time)
+        end_time = datetime.now(tz)
+        if start_time.tzinfo is None:
+            start_time = tz.localize(start_time)
+        if end_time.tzinfo is None:
+            end_time = tz.localize(end_time)
 
-    start_iso = start_time.strftime("%Y-%m-%dT%H:%M:%S+05:00")
-    end_iso = end_time.strftime("%Y-%m-%dT%H:%M:%S+05:00")
+        start_iso = start_time.strftime("%Y-%m-%dT%H:%M:%S+05:00")
+        end_iso = end_time.strftime("%Y-%m-%dT%H:%M:%S+05:00")
 
-    all_logs = []
-    errors = []
-    all_devices_success = True  # 👉 Har bir qurilma muvaffaqiyatli javob bergan bo‘lishi kerak
+        all_devices_success = True  # Har bir yotoqxona uchun alohida tekshiriladi
 
-    for dormitory in Dormitory.objects.all():
         for device in dormitory.devices.all():
             url = f"http://{device.ipaddress}/ISAPI/AccessControl/AcsEvent?format=json"
             headers = {
@@ -47,8 +46,6 @@ def update_dormitory_status():
             }
             search_position = 0
             max_results = 20
-
-            device_success = False  # 👉 Har bir device uchun flag
 
             while True:
                 payload = {
@@ -73,7 +70,7 @@ def update_dormitory_status():
 
                     if response.status_code != 200:
                         errors.append(f"{device.ipaddress} — Status code: {response.status_code}")
-                        all_devices_success = False  # ❌ bitta qurilmadan ham xato bo‘lsa, umumiy success false bo‘ladi
+                        all_devices_success = False
                         break
 
                     data = response.json()
@@ -120,14 +117,13 @@ def update_dormitory_status():
                     all_devices_success = False
                     break
 
-            # Agar butunlay hech qanday javob bo‘lmagan bo‘lsa — bu ham xatolik deb hisoblanadi
-
-    # ✅ Faqat barcha qurilmalardan muvaffaqiyatli javob bo‘lsa, update time ni saqlash
-    if all_devices_success:
-        new_last_time = (end_time - timedelta(minutes=3)).strftime("%Y-%m-%d %H:%M")
-        SystemConfig.set("LAST_UPDATE_TIME", new_last_time)
+        if all_devices_success:
+            new_last_time = (end_time - timedelta(minutes=3)).strftime("%Y-%m-%d %H:%M")
+            dormitory.last_update_time = new_last_time
+            dormitory.save(update_fields=["last_update_time"])
 
     return all_logs, errors
+
 
 def add_user_to_devices(dormitory: Dormitory, employee_id: str, full_name: str, image_path: str) -> tuple[bool, str | None]:
     """Barcha qurilmalarga foydalanuvchini (ism+familiya+id) va rasmni yuklash.

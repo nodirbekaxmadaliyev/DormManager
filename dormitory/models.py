@@ -10,6 +10,7 @@ class Dormitory(models.Model):
         default=1,
         help_text="Shartnomaga asosan boshlang‘ich oylik to‘lov (so‘mda)"
     )
+    last_update_time = models.DateTimeField(blank=True, null=True)
     def __str__(self):
         return self.name
 

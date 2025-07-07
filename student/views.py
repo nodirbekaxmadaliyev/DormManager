@@ -16,7 +16,6 @@ from django.shortcuts import render, redirect
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.http import JsonResponse
 from django.db import models
-from django.db.models import Count
 
 class StudentListView(ListView):
     model = Student
@@ -25,11 +24,23 @@ class StudentListView(ListView):
     paginate_by = 20
 
     def dispatch(self, request, *args, **kwargs):
-        _, errors = update_dormitory_status()
-        if errors:
-            request.session["device_errors"] = errors
-        else:
-            request.session.pop("device_errors", None)
+        user = request.user
+
+        # 👉 Dormitorylar ro‘yxatini aniqlash
+        dormitories = []
+        if hasattr(user, 'director'):
+            dormitories = user.director.dormitories.all()
+        elif hasattr(user, 'employee') and user.employee.dormitory:
+            dormitories = [user.employee.dormitory]
+
+        # 👉 Qurilma loglarini tekshirish va xatoliklarni sessionga saqlash
+        if dormitories:
+            _, errors = update_dormitory_status(dormitories)
+            if errors:
+                request.session["device_errors"] = errors
+            else:
+                request.session.pop("device_errors", None)
+
         return super().dispatch(request, *args, **kwargs)
 
     def get_queryset(self):
