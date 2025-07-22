@@ -12,4 +12,6 @@ class Payment(models.Model):
 
     def __str__(self):
         return f"{self.student} - {self.amount} so‘m - {self.add_time.strftime('%Y-%m-%d %H:%M')}"
-    
+
+class MonthlyPayment(models.Model):
+    monthly = models.PositiveIntegerField()

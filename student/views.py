@@ -10,12 +10,13 @@ import pandas as pd
 from django.http import HttpResponse
 from datetime import datetime
 from openpyxl import Workbook
-from utils.hikvision import add_user_to_devices, delete_user_from_devices, update_dormitory_status
+from utils.hikvision import add_user_to_devices, delete_user_from_devices, update_dormitory_status, open_user_on_devices, block_user_on_devices
 from django.contrib import messages
-from django.shortcuts import render, redirect
+from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.http import JsonResponse
 from django.db import models
+from django.views.decorators.csrf import csrf_exempt
 
 class StudentListView(ListView):
     model = Student
@@ -203,7 +204,6 @@ class StudentUpdateView(LoginRequiredMixin, UpdateView):
     def get_success_url(self):
         return reverse('student_detail', kwargs={'pk': self.object.pk})
 
-
 class StudentDeleteView(DeleteView):
     model = Student
     template_name = 'student/student_delete.html'
@@ -276,3 +276,27 @@ def load_rooms_ajax(request):
 
     return JsonResponse(list(rooms.values('id', 'number')), safe=False)
 
+@csrf_exempt
+def toggle_block(request, pk):
+    student = get_object_or_404(Student, pk=pk)
+    Sid = str(student.id)
+    print(Sid)
+    if request.method == 'POST':
+        if student.blocked:
+            success, reason = open_user_on_devices(student.dormitory, Sid)
+            if success:
+                student.blocked = False
+                student.save()
+                messages.success(request, "Foydalanuvchi ochildi.")
+            else:
+                messages.error(request, f"Ochishda xatolik: {reason}")
+        else:
+            success, reason = block_user_on_devices(student.dormitory, Sid)
+            if success:
+                student.blocked = True
+                student.save()
+                messages.success(request, "Foydalanuvchi bloklandi.")
+            else:
+                messages.error(request, f"Bloklashda xatolik: {reason}")
+
+    return redirect('student_detail', pk=student.pk)

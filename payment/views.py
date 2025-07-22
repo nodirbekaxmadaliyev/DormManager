@@ -105,7 +105,6 @@ class DebtStatisticsView(ListView):
 
         return context
 
-
 class StudentSearchAPIView(View):
     def get(self, request):
         q = request.GET.get("q", "")

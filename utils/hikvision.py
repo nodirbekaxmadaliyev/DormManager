@@ -124,7 +124,6 @@ def update_dormitory_status(dormitories):
 
     return all_logs, errors
 
-
 def add_user_to_devices(dormitory: Dormitory, employee_id: str, full_name: str, image_path: str) -> tuple[bool, str | None]:
     """Barcha qurilmalarga foydalanuvchini (ism+familiya+id) va rasmni yuklash.
     Xatolik bo‘lsa: (False, xatolik_sababi), muvaffaqiyatli bo‘lsa: (True, None)
@@ -165,7 +164,7 @@ def add_user_to_devices(dormitory: Dormitory, employee_id: str, full_name: str, 
         try:
             auth = HTTPDigestAuth(username, password)
             headers = {"Content-Type": "application/json"}
-            user_url = f"{base_url}/ISAPI/AccessControl/UserInfo/Record?format=json"
+            user_url = f"{base_url}/ISAPI/AccessControl/UserInfo/Record?format=json&security=1"
             user_response = requests.post(user_url, auth=auth, json=user_payload, headers=headers, verify=False)
 
             if user_response.status_code != 200:
@@ -310,7 +309,7 @@ def getLogs(dormitory: Dormitory, start_time_str, end_time_str):
         password = device.password
         entrance = device.entrance
 
-        url = f"http://{device_ip}/ISAPI/AccessControl/AcsEvent?format=json"
+        url = f"http://{device_ip}/ISAPI/AccessControl/AcsEvent?format=json&security=1"
         headers = {
             "Content-Type": "application/json",
             "Accept": "application/json"
@@ -325,8 +324,8 @@ def getLogs(dormitory: Dormitory, start_time_str, end_time_str):
                     "searchID": "100001",
                     "searchResultPosition": search_position,
                     "maxResults": max_results,
-                    "major": 5,
-                    "minor": 75,
+                    "major": 0,
+                    "minor": 0,
                     "startTime": start_iso,
                     "endTime": end_iso,
                     "picEnable": True,
@@ -394,3 +393,90 @@ def getLogs(dormitory: Dormitory, start_time_str, end_time_str):
     all_logs.sort(key=lambda x: x["time"], reverse=True)
 
     return all_logs, errors,
+
+def block_user_on_devices(dormitory: Dormitory, employee_id: str) -> tuple[bool, str | None]:
+
+    urllib3.disable_warnings()
+
+    devices = dormitory.devices.all()
+
+    for device in devices:
+        base_url = f"http://{device.ipaddress}"
+        auth = HTTPDigestAuth(device.username, device.password)
+
+        update_url = f"{base_url}/ISAPI/AccessControl/UserInfo/Modify?format=json"
+        payload = {
+            "UserInfo": {
+                "employeeNo": employee_id,
+                "userType": "blackList",
+                "Valid": {
+                    "enable": True,
+                    "beginTime": "2025-01-01T00:00:00",
+                    "endTime": "2030-12-31T23:59:59",
+                    "timeType": "local"
+                },
+                "doorRight": "1",
+                "RightPlan": [{"doorNo": 1, "planTemplateNo": "1"}],
+                "gender": "unknown",
+                "localUIRight": False,
+                "maxOpenDoorTime": 100,
+                "userVerifyMode": "face",
+                "password": ""
+            }
+        }
+
+        try:
+            response = requests.put(update_url, auth=auth, json=payload, headers={"Content-Type": "application/json"},
+                                    verify=False)
+            if response.status_code == 200:
+                print(f"[{device.ipaddress}] ✅ Yangilandi: {employee_id}")
+            else:
+                return False, f"[{device.ipaddress}] ❌ Xato: {response.status_code} - {response.text}"
+        except Exception as e:
+            return False, f"[{device.ipaddress}] ❌ Istisno: {str(e)}"
+
+    return True, None
+
+def open_user_on_devices(dormitory: Dormitory, employee_id: str) -> tuple[bool, str | None]:
+
+    urllib3.disable_warnings()
+
+    devices = dormitory.devices.all()
+
+    for device in devices:
+        base_url = f"http://{device.ipaddress}"
+        auth = HTTPDigestAuth(device.username, device.password)
+
+        update_url = f"{base_url}/ISAPI/AccessControl/UserInfo/Modify?format=json"
+        payload = {
+            "UserInfo": {
+                "employeeNo": employee_id,
+                "userType": "normal",
+                "Valid": {
+                    "enable": True,
+                    "beginTime": "2025-01-01T00:00:00",
+                    "endTime": "2030-12-31T23:59:59",
+                    "timeType": "local"
+                },
+                "doorRight": "1",
+                "RightPlan": [{"doorNo": 1, "planTemplateNo": "1"}],
+                "gender": "unknown",
+                "localUIRight": False,
+                "maxOpenDoorTime": 100,
+                "userVerifyMode": "face",
+                "password": ""
+            }
+        }
+
+        try:
+            response = requests.put(update_url, auth=auth, json=payload, headers={"Content-Type": "application/json"},
+                                    verify=False)
+            if response.status_code == 200:
+                print(f"[{device.ipaddress}] ✅ Yangilandi: {employee_id}")
+            else:
+                return False, f"[{device.ipaddress}] ❌ Xato: {response.status_code} - {response.text}"
+        except Exception as e:
+            return False, f"[{device.ipaddress}] ❌ Istisno: {str(e)}"
+
+    return True, None
+

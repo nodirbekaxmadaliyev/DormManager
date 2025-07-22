@@ -29,7 +29,6 @@ class AutoIncrementField(models.PositiveIntegerField):
                 setattr(model_instance, self.attname, existing_ids[-1] + 1)
         return super().pre_save(model_instance, add)
 
-
 def student_image_upload_to(instance, filename):
     ext = filename.split('.')[-1]
 
@@ -39,7 +38,6 @@ def student_image_upload_to(instance, filename):
 
     new_filename = f"{room_number}_{last_name}_{first_name}.{ext}"
     return os.path.join('residents/', new_filename)
-
 
 class Student(models.Model):
     id = AutoIncrementField(start_from=10000)
@@ -60,7 +58,7 @@ class Student(models.Model):
     arrival_time = models.DateField(null=True, blank=True)
     checkout_time = models.DateField(null=True, blank=True)
     total_payment = models.PositiveIntegerField(null=True, blank=True, default=0)
-
+    blocked = models.BooleanField(default=False)
     def save(self, *args, **kwargs):
         if self.pk:
             old_student = Student.objects.get(pk=self.pk)
