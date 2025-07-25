@@ -111,18 +111,23 @@ class CustomUser(AbstractUser):
     def save(self, *args, **kwargs):
         is_new = self.pk is None
 
-        if is_new:
-            clean_first_name = re.sub(r'[^a-zA-Z0-9]', '', self.first_name.lower() if self.first_name else 'noname')
-            clean_last_name = re.sub(r'[^a-zA-Z0-9]', '', self.last_name.lower() if self.last_name else 'nosurname')
-            self.username = f"{clean_first_name}.{clean_last_name}"
-            self.set_password("12345678")
+        # Agar superuser bo'lsa, avtomatik o'zgartirishlarni o'tkazmaymiz
+        if not self.is_superuser:
+            if is_new:
+                clean_first_name = re.sub(r'[^a-zA-Z0-9]', '', self.first_name.lower() if self.first_name else 'noname')
+                clean_last_name = re.sub(r'[^a-zA-Z0-9]', '', self.last_name.lower() if self.last_name else 'nosurname')
+                self.username = f"{clean_first_name}.{clean_last_name}"
+                self.set_password("12345678")
 
-        super().save(*args, **kwargs)  # Bu yerda pk yaratiladi
+            super().save(*args, **kwargs)  # Bu yerda pk yaratiladi
 
-        # Usernamega pk ni qo‘shish (faqat yangi foydalanuvchi uchun)
-        if is_new:
-            self.username = f"{self.pk}_{self.username}"
-            super().save(update_fields=['username'])
+            # Usernamega pk ni qo'shish (faqat yangi foydalanuvchi uchun)
+            if is_new and not self.is_superuser:
+                self.username = f"{self.pk}_{self.username}"
+                super().save(update_fields=['username'])
+        else:
+            # Superuser uchun oddiy saqlash
+            super().save(*args, **kwargs)
 
     def clean(self):
         super().clean()
