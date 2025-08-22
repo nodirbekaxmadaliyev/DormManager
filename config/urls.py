@@ -12,6 +12,8 @@ urlpatterns = [
     path('logs/', include('Logs.urls')),
     path('payment/', include('payment.urls')),
     path('dormitory/', include('dormitory.urls')),
+    path("expenses/", include("expense.urls")),
+    path('stream/', include('stream.urls')),
 
 ]
 

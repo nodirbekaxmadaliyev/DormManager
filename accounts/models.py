@@ -55,7 +55,6 @@ def staff_photo_upload_path(instance, filename):
     return os.path.join('staff', new_filename)
 
 class CustomUser(AbstractUser):
-    id = AutoIncrementField(start_from=1)
     ROLE_CHOICES = [
         ('director', 'Direktor'),
         ('employee', 'Xodim'),

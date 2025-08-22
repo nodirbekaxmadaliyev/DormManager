@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container mt-4">
+    <h2>Chiqim qo‘shish</h2>
+    <form method="post">
+        {% csrf_token %}
+        {{ form.as_p }}
+
+        {% if user.role == "director" %}
+            <div class="form-group">
+                <label for="id_dormitory">Yotoqxona</label>
+                <select name="dormitory" id="id_dormitory" class="form-control">
+                    {% for dorm in dormitories %}
+                        <option value="{{ dorm.id }}">{{ dorm.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+        {% endif %}
+
+        <button type="submit" class="btn btn-primary">Saqlash</button>
+    </form>
+</div>
+{% endblock %}

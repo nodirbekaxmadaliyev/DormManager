@@ -36,6 +36,8 @@ INSTALLED_APPS = [
     'student',
     'Logs',
     'payment',
+    'expense',
+    'stream',
 ]
 
 MIDDLEWARE = [
@@ -101,7 +103,7 @@ AUTH_PASSWORD_VALIDATORS = [
 
 LANGUAGE_CODE = 'en-us'
 
-TIME_ZONE = 'UTC'
+TIME_ZONE = "Asia/Tashkent"
 
 USE_I18N = True
 
@@ -133,5 +135,4 @@ CELERY_ACCEPT_CONTENT = ['json']
 CELERY_TASK_SERIALIZER = 'json'
 # settings.py
 
-LAST_UPDATE_TIME = "2025-06-10 00:00"
 

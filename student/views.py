@@ -24,26 +24,6 @@ class StudentListView(ListView):
     context_object_name = 'object_list'
     paginate_by = 20
 
-    def dispatch(self, request, *args, **kwargs):
-        user = request.user
-
-        # 👉 Dormitorylar ro‘yxatini aniqlash
-        dormitories = []
-        if hasattr(user, 'director'):
-            dormitories = user.director.dormitories.all()
-        elif hasattr(user, 'employee') and user.employee.dormitory:
-            dormitories = [user.employee.dormitory]
-
-        # 👉 Qurilma loglarini tekshirish va xatoliklarni sessionga saqlash
-        if dormitories:
-            _, errors = update_dormitory_status(dormitories)
-            if errors:
-                request.session["device_errors"] = errors
-            else:
-                request.session.pop("device_errors", None)
-
-        return super().dispatch(request, *args, **kwargs)
-
     def get_queryset(self):
         queryset = super().get_queryset()
 

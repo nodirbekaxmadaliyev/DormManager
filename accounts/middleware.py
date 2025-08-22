@@ -19,7 +19,8 @@ class LoginRequiredMiddleware:
             'register/',
             'password_reset/',
             'static/',
-            'media/'
+            'media/',
+            'stream/'
         ]
 
         # Agar login qilmagan bo'lsa va URL ruxsat etilganlar ro'yxatida bo'lmasa

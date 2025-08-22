@@ -40,7 +40,7 @@ def student_image_upload_to(instance, filename):
     return os.path.join('residents/', new_filename)
 
 class Student(models.Model):
-    id = AutoIncrementField(start_from=10000)
+
     dormitory = models.ForeignKey(Dormitory, models.CASCADE, related_name='students')
     first_name = models.CharField(max_length=50)
     last_name = models.CharField(max_length=50)

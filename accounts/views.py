@@ -28,31 +28,10 @@ class DirectorAccessMixin(UserPassesTestMixin):
     def handle_no_permission(self):
         return HttpResponseForbidden("Sizda bu sahifaga kirish huquqi yo‘q.")
 
-
 class EmployeePage(LoginRequiredMixin, DirectorAccessMixin, ListView):
     model = Employee
     template_name = 'accounts/employees.html'
     context_object_name = 'employees'
-
-    def dispatch(self, request, *args, **kwargs):
-        user = request.user
-
-        # 👉 Dormitorylar ro‘yxatini aniqlash
-        dormitories = []
-        if hasattr(user, 'director'):
-            dormitories = user.director.dormitories.all()
-        elif hasattr(user, 'employee') and user.employee.dormitory:
-            dormitories = [user.employee.dormitory]
-
-        # 👉 Qurilma loglarini tekshirish va xatoliklarni sessionga saqlash
-        if dormitories:
-            _, errors = update_dormitory_status(dormitories)
-            if errors:
-                request.session["device_errors"] = errors
-            else:
-                request.session.pop("device_errors", None)
-
-        return super().dispatch(request, *args, **kwargs)
 
     def get_queryset(self):
         user = self.request.user
