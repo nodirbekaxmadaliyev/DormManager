@@ -5,6 +5,7 @@ from django.db import transaction
 
 from dormitory.models import Device
 from employee.models import Employee
+from accounts.models import CustomUser
 from student.models import Student
 
 
@@ -62,8 +63,7 @@ def hikvision_event(request):
                         if emp_no < 10000:
                             # Xodim
                             try:
-                                employee = Employee.objects.get(pk=emp_no)
-                                user = employee.user
+                                user = CustomUser.objects.get(pk=emp_no)
                                 user.is_in_dormitory = in_dorm
                                 user.save(update_fields=["is_in_dormitory"])
                                 print(f"[EMPLOYEE] {user.username} is_in_dormitory -> {in_dorm}")

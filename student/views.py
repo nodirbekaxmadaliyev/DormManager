@@ -18,6 +18,8 @@ from django.http import JsonResponse
 from django.db import models
 from django.views.decorators.csrf import csrf_exempt
 
+from django.views import View
+
 class StudentListView(ListView):
     model = Student
     template_name = 'student/home.html'
@@ -201,6 +203,39 @@ class StudentDeleteView(DeleteView):
 
         return super().delete(request, *args, **kwargs)
 
+
+class DeleteAllStudentsView(View):
+    success_url = reverse_lazy('students')
+
+    def post(self, request, *args, **kwargs):
+        students = Student.objects.all()
+
+        deleted_count = 0
+        failed_count = 0
+
+        for student in students:
+            dormitory = student.dormitory
+            employee_id = str(student.id)
+
+            success, reason = delete_user_from_devices(dormitory, employee_id)
+            if success:
+                student.delete()
+                deleted_count += 1
+            else:
+                failed_count += 1
+                messages.error(request, f"{student.first_name} {student.last_name} qurilmadan o‘chmadi: {reason}")
+
+        if deleted_count:
+            messages.success(request, f"{deleted_count} ta talaba muvaffaqiyatli o‘chirildi.")
+        if failed_count:
+            messages.warning(request, f"{failed_count} ta talabani qurilmadan o‘chirishda xatolik bo‘ldi.")
+
+        return redirect(self.success_url)
+
+
+import requests
+import json
+
 class StudentCreateView(LoginRequiredMixin, CreateView):
     model = Student
     template_name = 'student/student_add.html'
@@ -209,7 +244,7 @@ class StudentCreateView(LoginRequiredMixin, CreateView):
 
     def get_form_kwargs(self):
         kwargs = super().get_form_kwargs()
-        kwargs['user'] = self.request.user  # Foydalanuvchini forma ichiga yuborish
+        kwargs['user'] = self.request.user
         return kwargs
 
     def form_valid(self, form):
@@ -229,6 +264,46 @@ class StudentCreateView(LoginRequiredMixin, CreateView):
             tmp_file_path = tmp.name
 
         student.save()
+
+        # --- Remote serverga yuborish (multipart/form-data bilan) ---
+        data = {
+            "id": student.id,
+            "first_name": student.first_name,
+            "last_name": student.last_name,
+            "faculty": student.faculty,
+            "dormitory": student.dormitory.id if student.dormitory else "",
+            "room": student.room.id if student.room else "",
+            "phone_number": student.phone_number,
+            "is_in_dormitory": str(student.is_in_dormitory).lower(),
+            "parent_full_name": student.parent_full_name,
+            "parent_login": student.parent_login,
+            "parent_password": student.parent_password,
+            "contract_number": student.contract_number or "",
+            "contract_date": str(student.contract_date) if student.contract_date else "",
+            "arrival_time": str(student.arrival_time) if student.arrival_time else "",
+            "checkout_time": str(student.checkout_time) if student.checkout_time else "",
+            "total_payment": student.total_payment,
+            "blocked": str(student.blocked).lower(),
+        }
+
+        try:
+            with open(tmp_file_path, "rb") as f:  # ✅ fayl ochiladi va avtomatik yopiladi
+                files = {
+                    "image": (photo_file.name, f, photo_file.content_type)
+                }
+                response = requests.post(
+                    "http://192.168.0.107:8000/",
+                    data=data,
+                    files=files,
+                    timeout=20
+                )
+                if response.status_code == 201:
+                    print("✅ Remote serverga muvaffaqiyatli yuborildi.")
+                else:
+                    print(f"❌ Remote server xato: {response.status_code} - {response.text}")
+        except requests.RequestException as e:
+            print(f"❌ Remote serverga ulanishda xato: {e}")
+        # ----------------------------------------------------------
 
         success, reason = add_user_to_devices(dormitory, str(student.id), full_name, tmp_file_path)
 

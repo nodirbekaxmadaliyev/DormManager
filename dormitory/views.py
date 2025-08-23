@@ -200,31 +200,39 @@ class DormitoryDetailView(LoginRequiredMixin, DirectorOnlyMixin, DetailView):
                 continue
 
             checkout = student.checkout_time or today
-            delta = relativedelta(checkout, student.arrival_time)
-            months_passed = delta.years * 12 + delta.months + 1
-
             monthly = dorm.monthly_payment or 0
             min_required_months = dorm.default_monthly_payment or 0
-
             paid_total = student.total_payment or 0
-            required_total = months_passed * monthly
 
-            # Qarzdorlikni hisoblash - `DebtStatisticsView`ga mos
-            delta = relativedelta(today, student.arrival_time)
-            delta_month = delta.years * 12 + delta.months + 1 - min_required_months
-            if delta_month <= 0:
-                debt = required_total - paid_total
+            # ⚡ Oylik va kunlik hisoblash
+            delta = relativedelta(checkout, student.arrival_time)
+            months_passed = delta.years * 12 + delta.months
+            extra_days = (checkout - (student.arrival_time + relativedelta(months=months_passed))).days
+
+            daily_payment = monthly / 30  # o‘rtacha 30 kunlik stavka
+
+            # ✅ Minimal oylar hisobga olinishi
+            if months_passed < min_required_months:
+                # Agar minimal oyga yetmagan bo‘lsa, faqat real turgan oy+kun bo‘yicha
+                required_total = months_passed * monthly + extra_days * daily_payment
             else:
-                debt = (min_required_months + delta_month) * monthly - paid_total
+                # Avval minimal oylar uchun to‘lov
+                required_total = min_required_months * monthly
+                # Keyin qolgan oy va kunlar
+                remaining_months = months_passed - min_required_months
+                required_total += remaining_months * monthly + extra_days * daily_payment
+
+            debt = required_total - paid_total
+            debt = max(debt, 0)
 
             # Jami qiymatlarni yig‘ish
             total_required += required_total
             total_paid += paid_total
-            total_debt += max(debt, 0)
+            total_debt += debt
 
-        context["total_required"] = total_required
-        context["total_paid"] = total_paid
-        context["total_debt"] = total_debt
+        context["total_required"] = round(total_required, 2)
+        context["total_paid"] = round(total_paid, 2)
+        context["total_debt"] = round(total_debt, 2)
         return context
 
 

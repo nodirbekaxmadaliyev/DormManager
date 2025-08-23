@@ -1,5 +1,5 @@
 from django.urls import path
-from .views import StudentListView, StudentDetailView, StudentUpdateView, StudentDeleteView, StudentCreateView, load_rooms_ajax, toggle_block
+from .views import StudentListView, StudentDetailView, StudentUpdateView, StudentDeleteView, StudentCreateView, load_rooms_ajax, toggle_block, DeleteAllStudentsView
 
 urlpatterns = [
     path('', StudentListView.as_view(), name='students'),
@@ -9,4 +9,6 @@ urlpatterns = [
     path('<int:pk>/delete/', StudentDeleteView.as_view(), name='student_delete'),
     path('add/', StudentCreateView.as_view(), name='student_add'),
     path('ajax/load-rooms/', load_rooms_ajax, name='ajax_load_rooms'),
+    path("students/delete_all/", DeleteAllStudentsView.as_view(), name="students_delete_all"),
+
 ]

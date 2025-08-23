@@ -17,6 +17,14 @@
         <div>
             <a href="{% url 'student_add' %}" class="btn btn-success">Qo'shish</a>
             <button id="export-btn" class="btn btn-primary">Yuklash</button>
+            <form action="{% url 'students_delete_all' %}" method="post" style="display:inline;">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-danger" onclick="return confirm('Haqiqatan ham barcha talabalarni o‘chirmoqchimisiz?')">
+                    Hammasini o‘chirish
+                </button>
+            </form>
+
+
         </div>
     </div>
 </div>

@@ -12,6 +12,8 @@ from datetime import datetime
 import pandas as pd
 from .models import Payment, Student
 
+
+
 class DebtStatisticsView(ListView):
     model = Student
     template_name = 'payment/statistics.html'
@@ -40,7 +42,7 @@ class DebtStatisticsView(ListView):
         queryset = Student.objects.filter(dormitory__in=dormitories)
 
         q = self.request.GET.get('q', '').strip()
-        debt_filter = self.request.GET.get('debt_filter', '')  # new
+        debt_filter = self.request.GET.get('debt_filter', '')
 
         if q:
             queryset = queryset.filter(Q(first_name__icontains=q) | Q(last_name__icontains=q))
@@ -53,34 +55,42 @@ class DebtStatisticsView(ListView):
                 continue
 
             checkout = student.checkout_time or today
-            delta = relativedelta(checkout, student.arrival_time)
-            months_passed = delta.years * 12 + delta.months + 1
-
             monthly = student.dormitory.monthly_payment or 0
             min_required_months = student.dormitory.default_monthly_payment or 0
-
             paid_total = student.total_payment or 0
-            required_total = months_passed * monthly
 
-            delta = relativedelta(today, student.arrival_time)
-            delta_month = delta.years * 12 + delta.months + 1 - min_required_months
-            if delta_month <= 0:
-                debt = required_total - paid_total
+            # ⚡ Oylik va kunlik hisoblash
+            delta = relativedelta(checkout, student.arrival_time)
+            months_passed = delta.years * 12 + delta.months
+            extra_days = (checkout - (student.arrival_time + relativedelta(months=months_passed))).days
+
+            daily_payment = monthly / 30  # kunlik stavka
+
+            # ✅ Minimal oylik talabi bor-yo‘qligini hisobga olish
+            if months_passed < min_required_months:
+                # Agar minimal oyga yetmagan bo‘lsa, real vaqt asosida hisoblash
+                required_total = months_passed * monthly + extra_days * daily_payment
             else:
-                debt = (min_required_months + delta_month) * monthly - paid_total
+                # Avval minimal oylar uchun to‘lov
+                required_total = min_required_months * monthly
+                # Keyin qolgan ortiqcha oy va kunlar uchun
+                remaining_months = months_passed - min_required_months
+                required_total += remaining_months * monthly + extra_days * daily_payment
 
+            debt = required_total - paid_total
             debt = max(debt, 0)
 
             # ✅ Filter logikasi
             if (
-                    debt_filter == 'debtors' and debt > 0
-                    or debt_filter == 'no_debt' and debt == 0
-                    or debt_filter == ''
+                debt_filter == 'debtors' and debt > 0
+                or debt_filter == 'no_debt' and debt == 0
+                or debt_filter == ''
             ):
                 student.months_passed = months_passed
-                student.required_total = required_total
+                student.extra_days = extra_days
+                student.required_total = round(required_total, 2)
                 student.paid_total = paid_total
-                student.debt = debt
+                student.debt = round(debt, 2)
                 results.append(student)
 
         return results
@@ -88,22 +98,17 @@ class DebtStatisticsView(ListView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
 
-        # Qidiruv qiymatlari
         context['q'] = self.request.GET.get('q', '')
-        context['debt_filter'] = self.request.GET.get('debt_filter', '')  # 🔄 yangi parametr
+        context['debt_filter'] = self.request.GET.get('debt_filter', '')
 
-        students = context['students']  # queryset'dan qaytgan tayyor ro‘yxat
+        students = context['students']
 
-        # Statistikalar
-        total_required = sum(s.required_total for s in students)
-        total_paid = sum(s.paid_total for s in students)
-        total_debt = sum(s.debt for s in students)
-
-        context['total_required'] = total_required
-        context['total_paid'] = total_paid
-        context['total_debt'] = total_debt
+        context['total_required'] = sum(s.required_total for s in students)
+        context['total_paid'] = sum(s.paid_total for s in students)
+        context['total_debt'] = sum(s.debt for s in students)
 
         return context
+
 
 class StudentSearchAPIView(View):
     def get(self, request):
