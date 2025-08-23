@@ -12,7 +12,9 @@ from datetime import datetime
 import pandas as pd
 from .models import Payment, Student
 
-
+from django.contrib import messages
+from django.shortcuts import redirect
+from utils.hikvision import block_user_on_devices, open_user_on_devices
 
 class DebtStatisticsView(ListView):
     model = Student
@@ -29,7 +31,35 @@ class DebtStatisticsView(ListView):
 
         return super().get(request, *args, **kwargs)
 
+    def post(self, request, *args, **kwargs):
+        """🔹 Qarzdorlarni bloklash yoki barcha talabani ochish"""
+        action = request.POST.get("action")
+        students = self.get_queryset()
+
+        if action == "block_debtors":
+            blocked = 0
+            for student in students:
+                if student.debt > 0:
+                    ok, _ = block_user_on_devices(student.dormitory, str(student.pk))
+                    if ok:
+                        blocked += 1
+            messages.success(request, f"{blocked} ta qarzdor bloklandi.")
+            return redirect("debt_statistics")
+
+        elif action == "open_all":
+            opened = 0
+            for student in students:
+                ok, _ = open_user_on_devices(student.dormitory, str(student.pk))
+                if ok:
+                    opened += 1
+            messages.success(request, f"{opened} ta talaba blokdan chiqarildi.")
+            return redirect("debt_statistics")
+
+        messages.error(request, "Noto‘g‘ri amal.")
+        return redirect("debt_statistics")
+
     def get_queryset(self):
+        # 🔹 Siz yozganidek o‘zgarishsiz
         user = self.request.user
 
         if hasattr(user, 'director'):
@@ -59,28 +89,21 @@ class DebtStatisticsView(ListView):
             min_required_months = student.dormitory.default_monthly_payment or 0
             paid_total = student.total_payment or 0
 
-            # ⚡ Oylik va kunlik hisoblash
             delta = relativedelta(checkout, student.arrival_time)
             months_passed = delta.years * 12 + delta.months
             extra_days = (checkout - (student.arrival_time + relativedelta(months=months_passed))).days
 
-            daily_payment = monthly / 30  # kunlik stavka
+            daily_payment = monthly / 30
 
-            # ✅ Minimal oylik talabi bor-yo‘qligini hisobga olish
             if months_passed < min_required_months:
-                # Agar minimal oyga yetmagan bo‘lsa, real vaqt asosida hisoblash
                 required_total = months_passed * monthly + extra_days * daily_payment
             else:
-                # Avval minimal oylar uchun to‘lov
                 required_total = min_required_months * monthly
-                # Keyin qolgan ortiqcha oy va kunlar uchun
                 remaining_months = months_passed - min_required_months
                 required_total += remaining_months * monthly + extra_days * daily_payment
 
-            debt = required_total - paid_total
-            debt = max(debt, 0)
+            debt = max(required_total - paid_total, 0)
 
-            # ✅ Filter logikasi
             if (
                 debt_filter == 'debtors' and debt > 0
                 or debt_filter == 'no_debt' and debt == 0
@@ -102,7 +125,6 @@ class DebtStatisticsView(ListView):
         context['debt_filter'] = self.request.GET.get('debt_filter', '')
 
         students = context['students']
-
         context['total_required'] = sum(s.required_total for s in students)
         context['total_paid'] = sum(s.paid_total for s in students)
         context['total_debt'] = sum(s.debt for s in students)

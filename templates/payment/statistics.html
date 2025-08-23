@@ -24,6 +24,21 @@
         </div>
     </div>
 
+    <div class="mb-3">
+    <form method="post" style="display:inline;">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="open_all">
+        <button type="submit" class="btn btn-success">🔓 Barcha talabani ochish</button>
+    </form>
+
+    <form method="post" style="display:inline;">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="block_debtors">
+        <button type="submit" class="btn btn-danger">⛔ Qarzdorlarni bloklash</button>
+    </form>
+</div>
+
+
     <!-- 🔄 Qidiruv formasi -->
     <form method="get" class="row g-3 mb-3" id="search-form">
         <div class="col-md-4">
