@@ -130,6 +130,11 @@ class CustomUser(AbstractUser):
 
     def clean(self):
         super().clean()
+
+        if self.photo:
+            if self.photo.size > 204799:  # 200 KB = 200 * 1024 = 204800 bytes
+                raise ValidationError({'photo': "Rasm hajmi 200KB dan oshmasligi kerak."})
+
         if self.password and len(self.password) < 8:
             raise ValidationError(
                 _('Parol kamida 4 ta belgidan iborat bo\'lishi kerak'),

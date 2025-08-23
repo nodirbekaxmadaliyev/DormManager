@@ -4,7 +4,7 @@ from django.dispatch import receiver
 import os
 from dormitory.models import Dormitory, Room
 from django.utils.text import slugify  # Fayl nomini xavfsiz qilish uchun
-
+from django.core.exceptions import ValidationError
 
 class AutoIncrementField(models.PositiveIntegerField):
     def __init__(self, start_from=10000, *args, **kwargs):
@@ -70,6 +70,13 @@ class Student(models.Model):
         self.parent_login = f"{self.first_name.lower()}.{self.last_name.lower()}_{room_label}"
         self.parent_password = '12345678'
         super().save(*args, **kwargs)
+
+    def clean(self):
+        super().clean()
+
+        if self.image:
+            if self.image.size > 204799:  # 200 KB = 200 * 1024 = 204800 bytes
+                raise ValidationError({'image': "Rasm hajmi 200KB dan oshmasligi kerak."})
 
     def __str__(self):
         return f"({self.room}) {self.first_name} {self.last_name} "
