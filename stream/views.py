@@ -7,6 +7,8 @@ from dormitory.models import Device
 from employee.models import Employee
 from accounts.models import CustomUser
 from student.models import Student
+import requests
+from django.utils.timezone import now
 
 
 events = []        # Oxirgi eventlarni saqlash
@@ -59,6 +61,7 @@ def hikvision_event(request):
 
                 if emp_no and device:
                     in_dorm = True if device.entrance else False
+                    log_time = event_json.get("dateTime")
                     with transaction.atomic():
                         if emp_no < 10000:
                             # Xodim
@@ -70,12 +73,25 @@ def hikvision_event(request):
                             except Employee.DoesNotExist:
                                 print(f"Employee {emp_no} topilmadi")
                         else:
-                            # Student
                             try:
                                 student = Student.objects.get(pk=emp_no)
                                 student.is_in_dormitory = in_dorm
                                 student.save(update_fields=["is_in_dormitory"])
-                                print(f"[STUDENT] {student.first_name} {student.last_name} is_in_dormitory -> {in_dorm}")
+                                print(
+                                    f"[STUDENT] {student.first_name} {student.last_name} is_in_dormitory -> {in_dorm}")
+
+                                # 🔽 Student ma'lumotini tashqi serverga yuboramiz
+                                payload = {
+                                    "student_id": student.id,
+                                    "full_name": f"{student.first_name} {student.last_name}",
+                                    "log_time": log_time,
+                                    "enterence": True if in_dorm else False
+                                }
+                                try:
+                                    requests.post("http://173.249.23.86:7000/stream/", json=payload, timeout=3)
+                                except Exception as e:
+                                    print(f"[STREAM ERROR] {e}")
+
                             except Student.DoesNotExist:
                                 print(f"Student {emp_no} topilmadi")
 
