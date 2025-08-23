@@ -80,18 +80,6 @@ def hikvision_event(request):
                                 print(
                                     f"[STUDENT] {student.first_name} {student.last_name} is_in_dormitory -> {in_dorm}")
 
-                                # 🔽 Student ma'lumotini tashqi serverga yuboramiz
-                                payload = {
-                                    "student_id": student.id,
-                                    "full_name": f"{student.first_name} {student.last_name}",
-                                    "log_time": log_time,
-                                    "enterence": True if in_dorm else False
-                                }
-                                try:
-                                    requests.post("http://173.249.23.86:7000/stream/", json=payload, timeout=3)
-                                except Exception as e:
-                                    print(f"[STREAM ERROR] {e}")
-
                             except Student.DoesNotExist:
                                 print(f"Student {emp_no} topilmadi")
 

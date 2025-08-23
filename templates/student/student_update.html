@@ -10,11 +10,10 @@
         <div class="card-body">
             <form method="post" enctype="multipart/form-data">
                 {% csrf_token %}
-                
-                <!-- Xato xabarlarini ko'rsatish -->
+
                 {% if form.errors %}
                 <div class="alert alert-danger">
-                    <strong>Xatolik!</strong> Quyidagi maydonlarda xatoliklar mavjud:
+                    <strong>Xatolik!</strong>
                     <ul>
                         {% for field, errors in form.errors.items %}
                             {% for error in errors %}
@@ -24,62 +23,55 @@
                     </ul>
                 </div>
                 {% endif %}
-                
+
                 <div class="row">
                     <div class="col-md-6">
-                        <!-- Yotoqxona -->
-<div class="mb-3">
-    <label for="id_dormitory" class="form-label">Yotoqxona</label>
-    {{ form.dormitory|add_class:"form-select"|attr:"id=id_dormitory" }}
-</div>
+                        <!-- Ism -->
+                        <div class="mb-3">
+                            <label for="{{ form.first_name.id_for_label }}" class="form-label">Ism</label>
+                            {{ form.first_name|add_class:"form-control" }}
+                        </div>
 
-<!-- Xona -->
-<div class="mb-3">
-    <label for="id_room" class="form-label">Xona</label>
-    {{ form.room|add_class:"form-select"|attr:"id=id_room" }}
-</div>
+                        <!-- Familiya -->
+                        <div class="mb-3">
+                            <label for="{{ form.last_name.id_for_label }}" class="form-label">Familiya</label>
+                            {{ form.last_name|add_class:"form-control" }}
+                        </div>
 
-                        
                         <!-- Fakultet -->
                         <div class="mb-3">
                             <label for="{{ form.faculty.id_for_label }}" class="form-label">Fakultet</label>
-                            <input type="text" class="form-control" id="{{ form.faculty.id_for_label }}" 
-                                   name="{{ form.faculty.name }}" value="{{ form.faculty.value|default_if_none:'' }}">
-                        </div>
-                        
-                        <!-- Telefon raqami -->
-                        <div class="mb-3">
-                            <label for="{{ form.phone_number.id_for_label }}" class="form-label">Telefon raqami</label>
-                            <input type="text" class="form-control" id="{{ form.phone_number.id_for_label }}" 
-                                   name="{{ form.phone_number.name }}" value="{{ form.phone_number.value|default_if_none:'' }}">
+                            {{ form.faculty|add_class:"form-control" }}
                         </div>
                     </div>
-                    
+
                     <div class="col-md-6">
-                        <!-- Holati -->
+                        <!-- Yotoqxona -->
                         <div class="mb-3">
-                            <label class="form-label">Holati</label>
-                            <div class="form-check form-switch">
-                                <input class="form-check-input" type="checkbox" id="{{ form.is_in_dormitory.id_for_label }}" 
-                                       name="{{ form.is_in_dormitory.name }}" {% if form.is_in_dormitory.value %}checked{% endif %}>
-                                <label class="form-check-label" for="{{ form.is_in_dormitory.id_for_label }}">
-                                    {% if form.is_in_dormitory.value %}Ichkarida{% else %}Tashqarida{% endif %}
-                                </label>
-                            </div>
+                            <label for="{{ form.dormitory.id_for_label }}" class="form-label">Yotoqxona</label>
+                            {{ form.dormitory|add_class:"form-select" }}
                         </div>
-                        
+
+                        <!-- Xona -->
+                        <div class="mb-3">
+                            <label for="{{ form.room.id_for_label }}" class="form-label">Xona</label>
+                            {{ form.room|add_class:"form-select" }}
+                        </div>
+
+                        <!-- Kelgan sanasi -->
+                        <div class="mb-3">
+                            <label for="{{ form.arrival_time.id_for_label }}" class="form-label">Kelgan sanasi</label>
+                            {{ form.arrival_time|add_class:"form-control" }}
+                        </div>
+
                         <!-- Ketish sanasi -->
                         <div class="mb-3">
                             <label for="{{ form.checkout_time.id_for_label }}" class="form-label">Ketish sanasi</label>
-                            <input type="date" class="form-control" id="{{ form.checkout_time.id_for_label }}" 
-                                   name="{{ form.checkout_time.name }}" value="{{ form.checkout_time.value|date:'Y-m-d'|default_if_none:'' }}">
-                            <small class="text-muted">Agar talaba ketayotgan bo'lsa, sanani kiriting</small>
+                            {{ form.checkout_time|add_class:"form-control" }}
                         </div>
-                        
-
                     </div>
                 </div>
-                
+
                 <div class="d-flex justify-content-between mt-4">
                     <a href="{% url 'student_detail' object.id %}" class="btn btn-secondary">
                         <i class="fas fa-times"></i> Bekor qilish
@@ -92,36 +84,4 @@
         </div>
     </div>
 </div>
-
-<script>
-// Holat checkboxi uchun JavaScript
-document.getElementById('{{ form.is_in_dormitory.id_for_label }}').addEventListener('change', function() {
-    const label = document.querySelector(`label[for='{{ form.is_in_dormitory.id_for_label }}']`);
-    label.textContent = this.checked ? 'Ichkarida' : 'Tashqarida';
-});
-
-document.addEventListener('DOMContentLoaded', function () {
-    const dormitorySelect = document.getElementById('id_dormitory');
-    const roomSelect = document.getElementById('id_room');
-
-    if (dormitorySelect && roomSelect) {
-        dormitorySelect.addEventListener('change', function () {
-            const dormitoryId = this.value;
-            if (!dormitoryId) return;
-
-            fetch(`/students/ajax/load-rooms/?dormitory=${dormitoryId}`)
-                .then(response => response.json())
-                .then(data => {
-                    roomSelect.innerHTML = '<option value="">Xona tanlang</option>';
-                    data.forEach(room => {
-                        const option = document.createElement('option');
-                        option.value = room.id;
-                        option.textContent = room.number;
-                        roomSelect.appendChild(option);
-                    });
-                });
-        });
-    }
-});
-</script>
 {% endblock %}

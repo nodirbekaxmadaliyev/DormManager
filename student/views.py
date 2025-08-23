@@ -19,6 +19,10 @@ from django.db import models
 from django.views.decorators.csrf import csrf_exempt
 
 from django.views import View
+from django.contrib import messages
+from django.shortcuts import redirect
+from django.urls import reverse_lazy
+
 
 class StudentListView(ListView):
     model = Student
@@ -170,64 +174,12 @@ class StudentDetailView(DetailView):
 class StudentUpdateView(LoginRequiredMixin, UpdateView):
     model = Student
     template_name = 'student/student_update.html'
-    form_class = StudentCreateForm
-    success_url = None
-
-    def get_form_kwargs(self):
-        kwargs = super().get_form_kwargs()
-        kwargs['user'] = self.request.user
-        return kwargs
+    fields = ["dormitory", "room", "first_name", "last_name", "faculty", "arrival_time", "checkout_time"]
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['title'] = "Talaba ma'lumotlarini tahrirlash"
         return context
-
-    def form_valid(self, form):
-        response = super().form_valid(form)  # ✅ avval DB ga saqlanadi
-        student = self.object
-
-        # 🔹 1. Qurilmaga yuborish (agar kerak bo‘lsa)
-        ok, msg = open_user_on_devices(student.dormitory, str(student.employee_id))
-        if not ok:
-            messages.error(self.request, f"Qurilmaga yuborishda xato: {msg}")
-            return response
-
-        # 🔹 2. Remote serverga faqat data yuborish
-        data = {
-            "id": student.id,
-            "first_name": student.first_name,
-            "last_name": student.last_name,
-            "faculty": student.faculty,
-            "dormitory": student.dormitory.id if student.dormitory else "",
-            "room": student.room.id if student.room else "",
-            "phone_number": student.phone_number,
-            "is_in_dormitory": str(student.is_in_dormitory).lower(),
-            "parent_full_name": student.parent_full_name,
-            "parent_login": student.parent_login,
-            "parent_password": student.parent_password,
-            "contract_number": student.contract_number or "",
-            "contract_date": str(student.contract_date) if student.contract_date else "",
-            "arrival_time": str(student.arrival_time) if student.arrival_time else "",
-            "checkout_time": str(student.checkout_time) if student.checkout_time else "",
-            "total_payment": student.total_payment,
-            "blocked": str(student.blocked).lower(),
-        }
-
-        try:
-            resp = requests.post(
-                "http://173.249.23.86:7000/student/update",
-                data=data,
-                timeout=20
-            )
-            if resp.status_code == 200:
-                messages.success(self.request, "✅ Talaba muvaffaqiyatli yangilandi va remote serverga yuborildi.")
-            else:
-                messages.error(self.request, f"❌ Remote server xato: {resp.status_code} - {resp.text}")
-        except requests.RequestException as e:
-            messages.error(self.request, f"❌ Remote serverga ulanishda xato: {e}")
-
-        return response
 
     def get_success_url(self):
         return reverse('student_detail', kwargs={'pk': self.object.pk})
@@ -237,36 +189,18 @@ class StudentDeleteView(DeleteView):
     template_name = 'student/student_delete.html'
     success_url = reverse_lazy('students')
 
-    def delete(self, request, *args, **kwargs):
+    def form_valid(self, request, *args, **kwargs):
         self.object = self.get_object()
-        student = self.object
-        employee_id = str(student.id)
-        dormitory = student.dormitory
-
-        # 🔹 1. Qurilmalardan o‘chirish
+        employee_id = str(self.object.id)
+        dormitory = self.object.dormitory
         success, reason = delete_user_from_devices(dormitory, employee_id)
         if not success:
-            messages.error(request, f"❌ Talaba qurilmalardan o‘chmadi: {reason}")
+            # Qurilmalardan o‘chirishda xatolik bo‘lsa, foydalanuvchini modeldan o‘chirmaymiz
+            messages.error(request, f"Foydalanuvchi qurilmalardan o‘chmadi: {reason}")
             return self.get(request, *args, **kwargs)
 
-        # 🔹 2. Remote serverdan o‘chirish
-        try:
-            resp = requests.post(
-                "http://173.249.23.86:7000/student/delete",
-                data={"id": student.id},
-                timeout=20
-            )
-            if resp.status_code == 200:
-                messages.success(request, "✅ Talaba muvaffaqiyatli o‘chirildi va remote serverdan ham o‘chirildi.")
-            else:
-                messages.error(request, f"❌ Remote server xato: {resp.status_code} - {resp.text}")
-                return self.get(request, *args, **kwargs)
-        except requests.RequestException as e:
-            messages.error(request, f"❌ Remote serverga ulanishda xato: {e}")
-            return self.get(request, *args, **kwargs)
-
-        # 🔹 3. Agar hammasi muvaffaqiyatli bo‘lsa, DBdan o‘chiramiz
         return super().delete(request, *args, **kwargs)
+
 
 class DeleteAllStudentsView(View):
     success_url = reverse_lazy('students')
@@ -281,47 +215,21 @@ class DeleteAllStudentsView(View):
             dormitory = student.dormitory
             employee_id = str(student.id)
 
-            # 1️⃣ Qurilmalardan o‘chirish
             success, reason = delete_user_from_devices(dormitory, employee_id)
-            if not success:
+            if success:
+                student.delete()
+                deleted_count += 1
+            else:
                 failed_count += 1
-                messages.error(
-                    request, f"{student.first_name} {student.last_name} qurilmadan o‘chmadi: {reason}"
-                )
-                continue
-
-            # 2️⃣ Remote serverdan o‘chirish
-            try:
-                resp = requests.post(
-                    "http://173.249.23.86:7000/student/delete",
-                    data={"id": student.id},
-                    timeout=20
-                )
-                if resp.status_code != 200:
-                    failed_count += 1
-                    messages.error(
-                        request,
-                        f"{student.first_name} {student.last_name} remote serverdan o‘chmadi: "
-                        f"{resp.status_code} - {resp.text}"
-                    )
-                    continue
-            except requests.RequestException as e:
-                failed_count += 1
-                messages.error(
-                    request, f"{student.first_name} {student.last_name} remote serverga ulanishda xato: {e}"
-                )
-                continue
-
-            # 3️⃣ Lokal DB’dan o‘chirish (faqat qurilma + server muvaffaqiyatli bo‘lsa)
-            student.delete()
-            deleted_count += 1
+                messages.error(request, f"{student.first_name} {student.last_name} qurilmadan o‘chmadi: {reason}")
 
         if deleted_count:
-            messages.success(request, f"✅ {deleted_count} ta talaba muvaffaqiyatli o‘chirildi.")
+            messages.success(request, f"{deleted_count} ta talaba muvaffaqiyatli o‘chirildi.")
         if failed_count:
-            messages.warning(request, f"⚠️ {failed_count} ta talabani o‘chirishda xatolik bo‘ldi.")
+            messages.warning(request, f"{failed_count} ta talabani qurilmadan o‘chirishda xatolik bo‘ldi.")
 
         return redirect(self.success_url)
+
 
 import requests
 import json
@@ -355,7 +263,45 @@ class StudentCreateView(LoginRequiredMixin, CreateView):
 
         student.save()
 
+        # --- Remote serverga yuborish (multipart/form-data bilan) ---
+        data = {
+            "id": student.id,
+            "first_name": student.first_name,
+            "last_name": student.last_name,
+            "faculty": student.faculty,
+            "dormitory": student.dormitory.id if student.dormitory else "",
+            "room": student.room.id if student.room else "",
+            "phone_number": student.phone_number,
+            "is_in_dormitory": str(student.is_in_dormitory).lower(),
+            "parent_full_name": student.parent_full_name,
+            "parent_login": student.parent_login,
+            "parent_password": student.parent_password,
+            "contract_number": student.contract_number or "",
+            "contract_date": str(student.contract_date) if student.contract_date else "",
+            "arrival_time": str(student.arrival_time) if student.arrival_time else "",
+            "checkout_time": str(student.checkout_time) if student.checkout_time else "",
+            "total_payment": student.total_payment,
+            "blocked": str(student.blocked).lower(),
+        }
 
+        try:
+            with open(tmp_file_path, "rb") as f:  # ✅ fayl ochiladi va avtomatik yopiladi
+                files = {
+                    "image": (photo_file.name, f, photo_file.content_type)
+                }
+                response = requests.post(
+                    "http://192.168.0.107:8000/",
+                    data=data,
+                    files=files,
+                    timeout=20
+                )
+                if response.status_code == 201:
+                    print("✅ Remote serverga muvaffaqiyatli yuborildi.")
+                else:
+                    print(f"❌ Remote server xato: {response.status_code} - {response.text}")
+        except requests.RequestException as e:
+            print(f"❌ Remote serverga ulanishda xato: {e}")
+        # ----------------------------------------------------------
 
         success, reason = add_user_to_devices(dormitory, str(student.id), full_name, tmp_file_path)
 
@@ -364,45 +310,6 @@ class StudentCreateView(LoginRequiredMixin, CreateView):
 
         if success:
             messages.success(self.request, "Talaba qurilmalarga muvaffaqiyatli qo‘shildi.")
-            # --- Remote serverga yuborish (multipart/form-data bilan) ---
-            data = {
-                "id": student.id,
-                "first_name": student.first_name,
-                "last_name": student.last_name,
-                "faculty": student.faculty,
-                "dormitory": student.dormitory.id if student.dormitory else "",
-                "room": student.room.id if student.room else "",
-                "phone_number": student.phone_number,
-                "is_in_dormitory": str(student.is_in_dormitory).lower(),
-                "parent_full_name": student.parent_full_name,
-                "parent_login": student.parent_login,
-                "parent_password": student.parent_password,
-                "contract_number": student.contract_number or "",
-                "contract_date": str(student.contract_date) if student.contract_date else "",
-                "arrival_time": str(student.arrival_time) if student.arrival_time else "",
-                "checkout_time": str(student.checkout_time) if student.checkout_time else "",
-                "total_payment": student.total_payment,
-                "blocked": str(student.blocked).lower(),
-            }
-
-            try:
-                with open(tmp_file_path, "rb") as f:  # ✅ fayl ochiladi va avtomatik yopiladi
-                    files = {
-                        "image": (photo_file.name, f, photo_file.content_type)
-                    }
-                    response = requests.post(
-                        "http://173.249.23.86:7000/student/add",
-                        data=data,
-                        files=files,
-                        timeout=20
-                    )
-                    if response.status_code == 201:
-                        print("✅ Remote serverga muvaffaqiyatli yuborildi.")
-                    else:
-                        print(f"❌ Remote server xato: {response.status_code} - {response.text}")
-            except requests.RequestException as e:
-                print(f"❌ Remote serverga ulanishda xato: {e}")
-            # ----------------------------------------------------------
             return redirect(self.success_url)
         else:
             student.delete()
