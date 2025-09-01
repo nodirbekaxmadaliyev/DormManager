@@ -168,20 +168,20 @@ class EmployeeDeleteView(LoginRequiredMixin, DirectorAccessMixin, DeleteView):
     model = CustomUser
     success_url = reverse_lazy('employees')
 
-    def form_valid(self, request, *args, **kwargs):
+    def form_valid(self, form):
         self.object = self.get_object()
         employee_id = str(self.object.pk)
 
         try:
             dormitory = self.object.employee.dormitory  # to‘g‘ri bog‘langan model
         except AttributeError:
-            messages.error(request, "Foydalanuvchining hodim ma'lumotlari topilmadi.")
-            return self.get(request, *args, **kwargs)
+            messages.error(self.request, "Foydalanuvchining hodim ma'lumotlari topilmadi.")
+            return redirect(self.success_url)
 
         success, reason = delete_user_from_devices(dormitory, employee_id)
         if not success:
-            messages.error(request, f"Foydalanuvchi qurilmalardan o‘chmadi: {reason}")
-            return self.get(request, *args, **kwargs)
+            messages.error(self.request, f"Foydalanuvchi qurilmalardan o‘chmadi: {reason}")
+            return redirect(self.success_url)
 
         # Suratni o‘chirish
         if self.object.photo:
@@ -189,7 +189,7 @@ class EmployeeDeleteView(LoginRequiredMixin, DirectorAccessMixin, DeleteView):
             if os.path.exists(photo_path):
                 os.remove(photo_path)
 
-        return super().delete(request, *args, **kwargs)
+        return super().form_valid(form)
 
 def change_password(request):
     if request.method == 'POST':
@@ -230,6 +230,10 @@ class EmployeeCreateView(CreateView):
         photo_file = form.cleaned_data.get('photo')
         full_name = f"{form.cleaned_data['first_name']} {form.cleaned_data['last_name']}"
         dormitory = form.cleaned_data.get('dormitory')
+
+        if photo_file and photo_file.size >= 200 * 1024:
+            messages.error(self.request, "Rasm hajmi 200KB dan oshmasligi kerak.")
+            return render(self.request, self.template_name, {'form': form})
 
         if not photo_file:
             messages.error(self.request, "Surat yuklanmagan. Iltimos, rasmni tanlang.")

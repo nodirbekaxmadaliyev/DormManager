@@ -71,7 +71,7 @@ class StudentListView(ListView):
 
             # DataFrame yaratish
             df = pd.DataFrame(list(queryset.values(
-                'first_name', 'last_name', 'dormitory__name', 'faculty', 'room',
+                'first_name', 'last_name', 'dormitory__name', 'faculty', 'room__number',
                 'phone_number', 'is_in_dormitory', 'arrival_time',
                 'checkout_time', 'total_payment'
             )))
@@ -189,17 +189,17 @@ class StudentDeleteView(DeleteView):
     template_name = 'student/student_delete.html'
     success_url = reverse_lazy('students')
 
-    def form_valid(self, request, *args, **kwargs):
+    def form_valid(self, form):
         self.object = self.get_object()
         employee_id = str(self.object.id)
         dormitory = self.object.dormitory
         success, reason = delete_user_from_devices(dormitory, employee_id)
         if not success:
-            # Qurilmalardan o‘chirishda xatolik bo‘lsa, foydalanuvchini modeldan o‘chirmaymiz
-            messages.error(request, f"Foydalanuvchi qurilmalardan o‘chmadi: {reason}")
-            return self.get(request, *args, **kwargs)
+            messages.error(self.request, f"Foydalanuvchi qurilmalardan o‘chmadi: {reason}")
+            return redirect('students')  # yoki self.get_success_url()
 
-        return super().delete(request, *args, **kwargs)
+        return super().form_valid(form)
+
 
 
 class DeleteAllStudentsView(View):
@@ -250,6 +250,10 @@ class StudentCreateView(LoginRequiredMixin, CreateView):
         photo_file = form.cleaned_data.get('image')
         full_name = f"{form.cleaned_data['first_name']} {form.cleaned_data['last_name']}"
         dormitory = form.cleaned_data.get('dormitory')
+
+        if photo_file and photo_file.size >= 200 * 1024:
+            messages.error(self.request, "Rasm hajmi 200KB dan oshmasligi kerak.")
+            return render(self.request, self.template_name, {'form': form})
 
         if not photo_file:
             messages.error(self.request, "Surat yuklanmagan. Iltimos, rasmni tanlang.")
