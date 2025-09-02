@@ -10,7 +10,7 @@ from student.models import Student
 import requests
 from django.utils.timezone import now
 
-
+REMOTE_STREAM_URL = "http://173.249.23.86:8020/stream/stream/"
 events = []        # Oxirgi eventlarni saqlash
 listeners = []     # SSE ulangan brauzerlar
 
@@ -77,8 +77,33 @@ def hikvision_event(request):
                                 student = Student.objects.get(pk=emp_no)
                                 student.is_in_dormitory = in_dorm
                                 student.save(update_fields=["is_in_dormitory"])
+
                                 print(
                                     f"[STUDENT] {student.first_name} {student.last_name} is_in_dormitory -> {in_dorm}")
+
+                                # Matn tayyorlash
+                                action = "KIRISH" if in_dorm else "CHIQISH"
+                                log_time = event_json.get("dateTime") or now().isoformat()
+                                message = (
+                                    f"{student.first_name} {student.last_name} {action}.\n"
+                                    f"Vaqt: {log_time}"
+                                )
+
+                                # Yuboriladigan payload
+                                data = {
+                                    "id": student.pk,
+                                    "message": message
+                                }
+
+                                response = requests.post(
+                                    REMOTE_STREAM_URL,
+                                    data=data,
+                                    timeout=20
+                                )
+                                if response.status_code == 201:
+                                    print("✅ Remote serverga muvaffaqiyatli yuborildi.")
+                                else:
+                                    print(f"❌ Remote server xato: {response.status_code} - {response.text}")
 
                             except Student.DoesNotExist:
                                 print(f"Student {emp_no} topilmadi")

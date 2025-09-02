@@ -171,15 +171,52 @@ class StudentDetailView(DetailView):
     template_name = 'student/student_detail.html'
     context_object_name = 'student'
 
+
 class StudentUpdateView(LoginRequiredMixin, UpdateView):
     model = Student
     template_name = 'student/student_update.html'
-    fields = ["dormitory", "room", "first_name", "last_name", "faculty", "arrival_time", "checkout_time"]
+    fields = [
+        "dormitory", "room", "first_name", "last_name", "faculty",
+        "arrival_time", "checkout_time",
+    ]
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['title'] = "Talaba ma'lumotlarini tahrirlash"
         return context
+
+    def form_valid(self, form):
+        student = form.save(commit=False)
+        student.save()
+
+        # --- Remote serverga yuboriladigan data ---
+        data = {
+            "id": student.id,
+            "first_name": student.first_name,
+            "last_name": student.last_name,
+            "faculty": student.faculty,
+            "phone_number": student.phone_number,
+            "is_in_dormitory": str(student.is_in_dormitory).lower(),
+            "parent_full_name": student.parent_full_name,
+            "arrival_time": str(student.arrival_time) if student.arrival_time else "",
+            "checkout_time": str(student.checkout_time) if student.checkout_time else "",
+        }
+
+        try:
+            response = requests.put(  # ✅ Update uchun PUT ishlatamiz
+                f"http://173.249.23.86:8020/student/update/{student.id}/",
+                data=data,
+                timeout=20
+            )
+            if response.status_code in (200, 202):
+                print("✅ Remote server yangilandi.")
+            else:
+                print(f"❌ Remote server xato: {response.status_code} - {response.text}")
+        except requests.RequestException as e:
+            print(f"❌ Remote serverga ulanishda xato: {e}")
+        # ----------------------------------------------------------
+
+        return super().form_valid(form)
 
     def get_success_url(self):
         return reverse('student_detail', kwargs={'pk': self.object.pk})
@@ -198,9 +235,20 @@ class StudentDeleteView(DeleteView):
             messages.error(self.request, f"Foydalanuvchi qurilmalardan o‘chmadi: {reason}")
             return redirect('students')  # yoki self.get_success_url()
 
+        try:
+            response = requests.post(
+                "http://173.249.23.86:8020/student/delete/",
+                json={"id": employee_id},  # ✅ faqat id yuborilsa kifoya
+                timeout=10
+            )
+            if response.status_code in (200, 204):
+                print("✅ Remote serverdan ham o‘chirildi.")
+            else:
+                print(f"❌ Remote server xato: {response.status_code} - {response.text}")
+        except requests.RequestException as e:
+            print(f"❌ Remote serverga ulanishda xato: {e}")
+
         return super().form_valid(form)
-
-
 
 class DeleteAllStudentsView(View):
     success_url = reverse_lazy('students')
@@ -217,6 +265,19 @@ class DeleteAllStudentsView(View):
 
             success, reason = delete_user_from_devices(dormitory, employee_id)
             if success:
+                try:
+                    response = requests.post(
+                        "http://173.249.23.86:8020/student/delete/",
+                        json={"id": employee_id},
+                        timeout=10
+                    )
+                    if response.status_code in (200, 204):
+                        print(f"✅ {student} remote serverdan o‘chirildi.")
+                    else:
+                        print(f"❌ Remote server xato ({student}): {response.status_code}")
+                except requests.RequestException as e:
+                    print(f"❌ Remote server ulanish xatosi ({student}): {e}")
+
                 student.delete()
                 deleted_count += 1
             else:
@@ -229,7 +290,6 @@ class DeleteAllStudentsView(View):
             messages.warning(request, f"{failed_count} ta talabani qurilmadan o‘chirishda xatolik bo‘ldi.")
 
         return redirect(self.success_url)
-
 
 import requests
 import json
@@ -269,23 +329,14 @@ class StudentCreateView(LoginRequiredMixin, CreateView):
 
         # --- Remote serverga yuborish (multipart/form-data bilan) ---
         data = {
-            "id": student.id,
+            "id": student.pk,  # ✅ bu integer, student_id bilan mos keladi
             "first_name": student.first_name,
             "last_name": student.last_name,
-            "faculty": student.faculty,
-            "dormitory": student.dormitory.id if student.dormitory else "",
-            "room": student.room.id if student.room else "",
             "phone_number": student.phone_number,
-            "is_in_dormitory": str(student.is_in_dormitory).lower(),
+            "is_in_dormitory": student.is_in_dormitory,  # ✅ BooleanField, True/False yuboriladi
             "parent_full_name": student.parent_full_name,
-            "parent_login": student.parent_login,
-            "parent_password": student.parent_password,
-            "contract_number": student.contract_number or "",
-            "contract_date": str(student.contract_date) if student.contract_date else "",
-            "arrival_time": str(student.arrival_time) if student.arrival_time else "",
-            "checkout_time": str(student.checkout_time) if student.checkout_time else "",
-            "total_payment": student.total_payment,
-            "blocked": str(student.blocked).lower(),
+            "arrival_time": student.arrival_time.isoformat() if student.arrival_time else None,
+            "checkout_time": student.checkout_time.isoformat() if student.checkout_time else None,
         }
 
         try:
@@ -294,7 +345,7 @@ class StudentCreateView(LoginRequiredMixin, CreateView):
                     "image": (photo_file.name, f, photo_file.content_type)
                 }
                 response = requests.post(
-                    "http://192.168.0.107:8000/",
+                    "http://173.249.23.86:8020/student/add/",
                     data=data,
                     files=files,
                     timeout=20

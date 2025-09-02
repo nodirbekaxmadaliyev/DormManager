@@ -50,7 +50,7 @@ class Student(models.Model):
     phone_number = models.CharField(max_length=20)
     is_in_dormitory = models.BooleanField(default=True)
     parent_full_name = models.CharField(max_length=100)
-    parent_login = models.CharField(max_length=150, unique=True, editable=False)
+    parent_login = models.CharField(max_length=150, editable=False)
     parent_password = models.CharField(max_length=20, editable=True)
     image = models.ImageField(upload_to=student_image_upload_to, null=True, blank=True)
     contract_number = models.CharField(max_length=50, null=True, blank=True)
