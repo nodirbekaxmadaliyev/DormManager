@@ -1,4 +1,6 @@
 import tempfile
+from ipaddress import ip_address
+
 from django.db.models import Count, Q
 import os
 from django.views.generic import ListView, DetailView, UpdateView, DeleteView, CreateView
@@ -171,6 +173,7 @@ class StudentDetailView(DetailView):
     template_name = 'student/student_detail.html'
     context_object_name = 'student'
 
+ip = '127.0.0.1:8001'
 
 class StudentUpdateView(LoginRequiredMixin, UpdateView):
     model = Student
@@ -204,7 +207,7 @@ class StudentUpdateView(LoginRequiredMixin, UpdateView):
 
         try:
             response = requests.put(  # ✅ Update uchun PUT ishlatamiz
-                f"http://173.249.23.86:8020/student/update/{student.id}/",
+                f"http://{ip}/student/update/{student.id}/",
                 data=data,
                 timeout=20
             )
@@ -237,7 +240,7 @@ class StudentDeleteView(DeleteView):
 
         try:
             response = requests.post(
-                "http://173.249.23.86:8020/student/delete/",
+                f"http://{ip}/student/delete/",
                 json={"id": employee_id},  # ✅ faqat id yuborilsa kifoya
                 timeout=10
             )
@@ -267,7 +270,7 @@ class DeleteAllStudentsView(View):
             if success:
                 try:
                     response = requests.post(
-                        "http://173.249.23.86:8020/student/delete/",
+                        f"http://{ip}/student/delete/",
                         json={"id": employee_id},
                         timeout=10
                     )
@@ -339,23 +342,7 @@ class StudentCreateView(LoginRequiredMixin, CreateView):
             "checkout_time": student.checkout_time.isoformat() if student.checkout_time else None,
         }
 
-        try:
-            with open(tmp_file_path, "rb") as f:  # ✅ fayl ochiladi va avtomatik yopiladi
-                files = {
-                    "image": (photo_file.name, f, photo_file.content_type)
-                }
-                response = requests.post(
-                    "http://173.249.23.86:8020/student/add/",
-                    data=data,
-                    files=files,
-                    timeout=20
-                )
-                if response.status_code == 201:
-                    print("✅ Remote serverga muvaffaqiyatli yuborildi.")
-                else:
-                    print(f"❌ Remote server xato: {response.status_code} - {response.text}")
-        except requests.RequestException as e:
-            print(f"❌ Remote serverga ulanishda xato: {e}")
+
         # ----------------------------------------------------------
 
         success, reason = add_user_to_devices(dormitory, str(student.id), full_name, tmp_file_path)
@@ -364,6 +351,19 @@ class StudentCreateView(LoginRequiredMixin, CreateView):
             os.remove(tmp_file_path)
 
         if success:
+            try:
+
+                    response = requests.post(
+                        f"http://{ip}/student/add/",
+                        data=data,
+                        timeout=20
+                    )
+                    if response.status_code == 201:
+                        print("✅ Remote serverga muvaffaqiyatli yuborildi.")
+                    else:
+                        print(f"❌ Remote server xato: {response.status_code} - {response.text}")
+            except requests.RequestException as e:
+                print(f"❌ Remote serverga ulanishda xato: {e}")
             messages.success(self.request, "Talaba qurilmalarga muvaffaqiyatli qo‘shildi.")
             return redirect(self.success_url)
         else:

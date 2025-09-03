@@ -1,132 +1,188 @@
 from django.http import HttpResponse, StreamingHttpResponse
 from django.views.decorators.csrf import csrf_exempt
-import base64, re, json
+import json
 from django.db import transaction
+from django.utils.timezone import now
+import time
+import requests
+from requests.exceptions import RequestException, Timeout, ConnectionError
+import re
 
 from dormitory.models import Device
-from employee.models import Employee
 from accounts.models import CustomUser
 from student.models import Student
-import requests
-from django.utils.timezone import now
 
-REMOTE_STREAM_URL = "http://173.249.23.86:8020/stream/stream/"
-events = []        # Oxirgi eventlarni saqlash
-listeners = []     # SSE ulangan brauzerlar
+ipAdd = '127.0.0.1:8001'
+REMOTE_STREAM_URL = f"http://{ipAdd}/stream/stream/"
+events = []  # Oxirgi eventlarni saqlash
+
+# Eventlarni va ularning qayta ishlanganligini kuzatish uchun
+processed_events = {}
 
 
 @csrf_exempt
 def hikvision_event(request):
-    global events
+    global events, processed_events
 
     if request.method == "POST":
-        raw = request.body
-        parts = re.split(b"--MIME_boundary", raw)
-        html_parts = []
-        event_json = None
+        try:
+            content_type = request.META.get('CONTENT_TYPE', '')
+            event_json = None
 
-        for part in parts:
-            if not part.strip():
-                continue
+            # Multipart/form-data ni qayta ishlash
+            if 'multipart/form-data' in content_type:
+                raw_data = request.body
 
-            if b"Content-Type: image/jpeg" in part:
-                # Rasmni base64 ga o‘tkazamiz
-                jpeg_data = part.split(b"\r\n\r\n", 1)[1].rstrip(b"--\r\n")
-                b64 = base64.b64encode(jpeg_data).decode()
-                html_parts.append(f"<img src='data:image/jpeg;base64,{b64}' style='max-width:300px;'><br>")
-            elif b"Content-Type: application/json" in part:
-                # JSON qism
+                # Boundary ni topish
+                boundary_match = re.search(r'boundary=(.*)$', content_type)
+                if boundary_match:
+                    boundary = boundary_match.group(1).encode()
+
+                    # Partlarni ajratish
+                    parts = raw_data.split(b'--' + boundary)
+
+                    for part in parts:
+                        if b'Content-Type: application/json' in part:
+                            # JSON qismini ajratish
+                            json_sections = part.split(b'\r\n\r\n', 1)
+                            if len(json_sections) > 1:
+                                json_part = json_sections[1]
+                                json_part = json_part.rstrip(b'\r\n--')
+
+                                try:
+                                    event_json = json.loads(json_part.decode('utf-8'))
+                                    break
+                                except json.JSONDecodeError:
+                                    continue
+
+                    if event_json is None:
+                        return HttpResponse("OK", content_type="text/plain")
+
+            # Agar multipart bo'lmasa, to'g'ridan-to'g'ri JSON deb harakat qilamiz
+            if event_json is None:
                 try:
-                    json_str = part.split(b"\r\n\r\n", 1)[1].rstrip(b"--\r\n").decode()
-                    event_json = json.loads(json_str)
-                    html_parts.append(f"<pre style='white-space:pre-wrap;font-size:12px;'>{json.dumps(event_json, indent=2, ensure_ascii=False)}</pre>")
-                except Exception as e:
-                    html_parts.append(f"<pre style='color:red;'>JSON xatosi: {e}</pre>")
+                    event_json = json.loads(request.body.decode('utf-8'))
+                except json.JSONDecodeError:
+                    return HttpResponse("OK", content_type="text/plain")
 
-        # Agar JSON bo‘lsa, Employee va Student uchun ishlov beramiz
-        if event_json:
-            emp_no_str = event_json.get("AccessControllerEvent", {}).get("employeeNoString")
+            # Eventni identifikatsiya qilish
+            event_id = event_json.get("eventId") or event_json.get("dateTime") or str(hash(str(event_json)))
+
+            # Agar bu event allaqachon qayta ishlangan bo'lsa, darhol 200 OK qaytaramiz
+            if event_id in processed_events:
+                return HttpResponse("OK", content_type="text/plain")
+
+            # JSON ma'lumotlarini tekshirish
+            access_event = event_json.get("AccessControllerEvent", {})
+            emp_no_str = access_event.get("employeeNoString")
             ip = event_json.get("ipAddress")
 
-            if emp_no_str and ip:
-                try:
-                    emp_no = int(emp_no_str)
-                except ValueError:
-                    emp_no = None
+            # Agar employeeNoString bo'lmasa, bu eventni o'tkazib yuboramiz
+            if not emp_no_str:
+                return HttpResponse("OK", content_type="text/plain")
 
-                try:
-                    device = Device.objects.get(ipaddress=ip)
-                except Device.DoesNotExist:
-                    device = None
+            if not ip:
+                processed_events[event_id] = now()
+                return HttpResponse("OK", content_type="text/plain")
 
-                if emp_no and device:
-                    in_dorm = True if device.entrance else False
-                    log_time = event_json.get("dateTime")
-                    with transaction.atomic():
-                        if emp_no < 10000:
-                            # Xodim
-                            try:
-                                user = CustomUser.objects.get(pk=emp_no)
-                                user.is_in_dormitory = in_dorm
-                                user.save(update_fields=["is_in_dormitory"])
-                                print(f"[EMPLOYEE] {user.username} is_in_dormitory -> {in_dorm}")
-                            except Employee.DoesNotExist:
-                                print(f"Employee {emp_no} topilmadi")
-                        else:
-                            try:
-                                student = Student.objects.get(pk=emp_no)
-                                student.is_in_dormitory = in_dorm
-                                student.save(update_fields=["is_in_dormitory"])
+            try:
+                emp_no = int(emp_no_str)
+            except ValueError:
+                processed_events[event_id] = now()
+                return HttpResponse("OK", content_type="text/plain")
 
-                                print(
-                                    f"[STUDENT] {student.first_name} {student.last_name} is_in_dormitory -> {in_dorm}")
+            try:
+                device = Device.objects.get(ipaddress=ip)
+            except Device.DoesNotExist:
+                processed_events[event_id] = now()
+                return HttpResponse("OK", content_type="text/plain")
 
-                                # Matn tayyorlash
-                                action = "KIRISH" if in_dorm else "CHIQISH"
-                                log_time = event_json.get("dateTime") or now().isoformat()
-                                message = (
-                                    f"{student.first_name} {student.last_name} {action}.\n"
-                                    f"Vaqt: {log_time}"
-                                )
+            in_dorm = True if device.entrance else False
 
-                                # Yuboriladigan payload
-                                data = {
+            with transaction.atomic():
+                if emp_no < 10000:
+                    # Xodim
+                    try:
+                        user = CustomUser.objects.get(pk=emp_no)
+                        user.is_in_dormitory = in_dorm
+                        user.save(update_fields=["is_in_dormitory"])
+                        print(f"[EMPLOYEE] {user.username} is_in_dormitory -> {in_dorm}")
+
+                    except CustomUser.DoesNotExist:
+                        print(f"Xodim {emp_no} topilmadi")
+
+                else:
+                    # Talaba
+                    try:
+                        student = Student.objects.get(pk=emp_no)
+                        student.is_in_dormitory = in_dorm
+                        student.save(update_fields=["is_in_dormitory"])
+
+                        print(f"[STUDENT] {student.first_name} {student.last_name} is_in_dormitory -> {in_dorm}")
+
+                        # Remote serverga FAQAT 1 MARTA urinish
+                        try:
+                            response = requests.post(
+                                REMOTE_STREAM_URL,
+                                json={
                                     "id": student.pk,
-                                    "message": message
-                                }
+                                    "message": f"{student.first_name} {student.last_name} --> {'KIRISH' if in_dorm else 'CHIQISH'}.\nVaqt: {event_json.get('dateTime') or now().isoformat()}"
+                                },
+                                timeout=2
+                            )
 
-                                response = requests.post(
-                                    REMOTE_STREAM_URL,
-                                    data=data,
-                                    timeout=20
-                                )
-                                if response.status_code == 201:
-                                    print("✅ Remote serverga muvaffaqiyatli yuborildi.")
-                                else:
-                                    print(f"❌ Remote server xato: {response.status_code} - {response.text}")
+                            if response.status_code == 200:
+                                print("✅ Remote serverga muvaffaqiyatli yuborildi.")
+                            else:
+                                print(f"⚠️ Remote server xato qaytardi: {response.status_code}")
 
-                            except Student.DoesNotExist:
-                                print(f"Student {emp_no} topilmadi")
+                        except (RequestException, Timeout, ConnectionError):
+                            print(f"⚠️ Remote serverga ulanib bo'lmadi.")
 
-        # Front uchun blok
-        block_html = (
-            "<div style='margin:10px;padding:10px;border:1px solid #ccc;'>"
-            + "".join(html_parts) +
-            "</div>"
-        )
-        events.append(block_html)
-        if len(events) > 20:
-            events = events[-20:]
+                    except Student.DoesNotExist:
+                        print(f"Talaba {emp_no} topilmadi")
 
-        print("=== Hikvision multipart event qabul qilindi ===")
-        return HttpResponse("OK", content_type="text/plain")
+            # Eventni qayta ishlanganlar ro'yxatiga qo'shamiz
+            processed_events[event_id] = now()
 
-    # GET bo'lsa — jonli kuzatish sahifasi
+            # Eventni saqlash
+            event_html = f"<div style='margin:10px;padding:10px;border:1px solid #ccc;'><pre style='white-space:pre-wrap;font-size:12px;'>{json.dumps(event_json, indent=2, ensure_ascii=False)}</pre></div>"
+            events.append(event_html)
+            if len(events) > 20:
+                events = events[-20:]
+
+            # Eski eventlarni tozalash (1 soatdan oldingi)
+            current_time = now()
+            for event_id_key in list(processed_events.keys()):
+                if (current_time - processed_events[event_id_key]).total_seconds() > 3600:
+                    del processed_events[event_id_key]
+
+            return HttpResponse("OK", content_type="text/plain")
+
+        except Exception as e:
+            print(f"Xatolik yuz berdi: {e}")
+            return HttpResponse("OK", content_type="text/plain")
+
+    # GET so'rovi uchun - jonli kuzatish sahifasi
     html = """
     <html>
     <head>
     <meta charset='utf-8'>
     <title>Hikvision Events</title>
+    <style>
+    .event-block { 
+        margin: 10px; 
+        padding: 10px; 
+        border: 1px solid #ccc; 
+        border-radius: 5px;
+        background-color: #f9f9f9;
+    }
+    .event-data {
+        white-space: pre-wrap;
+        font-size: 12px;
+        font-family: monospace;
+    }
+    </style>
     </head>
     <body>
     <h2>Oxirgi Hikvision Eventlar (jonli)</h2>
@@ -146,9 +202,19 @@ def hikvision_event(request):
 
 
 def stream_events(request):
-    # SSE orqali jonli ulanish
-    def event_stream():
-        resp = StreamingHttpResponse(content_type='text/event-stream')
-        listeners.append(resp)
-        return resp
-    return event_stream()
+    response = StreamingHttpResponse(stream_events_generator(), content_type='text/event-stream')
+    response['Cache-Control'] = 'no-cache'
+    response['Connection'] = 'keep-alive'
+    return response
+
+
+def stream_events_generator():
+    while True:
+        if events:
+            event_data = events[-1]
+            yield f"data: {event_data}\n\n"
+            events.clear()
+        else:
+            yield ":keep-alive\n\n"
+
+        time.sleep(1)
