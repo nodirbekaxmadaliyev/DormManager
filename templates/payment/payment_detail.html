@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+{% block content %}
+
+<div class="container mt-4">
+    <h2>To‘lov ma’lumotlari</h2>
+    <hr>
+
+    <!-- Bitta to'lov haqida ma'lumot -->
+    <h4>Tanlangan to‘lov:</h4>
+    <ul class="list-group mb-4">
+        <li class="list-group-item"><b>Talaba:</b> {{ payment.student }}</li>
+        <li class="list-group-item"><b>Summasi:</b> {{ payment.amount }} so‘m</li>
+        <li class="list-group-item"><b>To‘lov sanasi:</b> {{ payment.payment_time }}</li>
+        <li class="list-group-item"><b>Check vaqti:</b> {{ payment.add_time }}</li>
+        <li class="list-group-item"><b>Kiritgan foydalanuvchi:</b> {{ payment.added_by }}</li>
+    </ul>
+
+    <a href="{% url 'student_detail' payment.student.pk %}" class="btn btn-primary mb-4">
+        🧑‍🎓 Talaba profiliga o‘tish
+    </a>
+
+    <hr>
+    <!-- Talabaning barcha to'lovlari -->
+    <h4>{{ student }} ning barcha to‘lovlari</h4>
+    <table class="table table-bordered">
+        <thead>
+            <tr>
+                <th>#</th>
+                <th>Summasi</th>
+                <th>To‘lov sanasi</th>
+                <th>Check vaqti</th>
+                <th>Batafsil</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for pay in all_payments %}
+            <tr>
+                <td>{{ forloop.counter }}</td>
+                <td>{{ pay.amount }} so‘m</td>
+                <td>{{ pay.payment_time }}</td>
+                <td>{{ pay.add_time|date:"Y-m-d H:i" }}</td>
+                <td>
+                    <a href="{% url 'payment-detail' pay.pk %}" class="btn btn-sm btn-info">
+                        🔍 Ko‘rish
+                    </a>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <div class="alert alert-success mt-3">
+        <b>Umumiy summa:</b> {{ total_amount }} so‘m
+    </div>
+</div>
+
+{% endblock %}

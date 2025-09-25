@@ -4,7 +4,7 @@
             <tr>
                 <th>Talaba</th>
                 <th>To‘lov miqdori</th>
-                <th>Qo‘shgan foydalanuvchi</th>
+                <th>To'lov sanasi</th>
                 <th>Amal</th>
             </tr>
         </thead>
@@ -13,10 +13,10 @@
             <tr>
                 <td>{{ payment.student_name }}</td>
                 <td>{{ payment.amount }} so‘m</td>
-                <td>{{ payment.added_by.get_full_name }}</td>
+                <td>{{ payment.payment_time }}</td>
                 <td>
                     {% if payment.student %}
-                        <a href="{% url 'student_detail' payment.student.id %}" class="btn btn-sm btn-info">Batafsil</a>
+                        <a href="{% url 'payment-detail' payment.pk %}" class="btn btn-sm btn-info">Batafsil</a>
                     {% else %}
                         <span class="text-muted">O‘chirilgan</span>
                     {% endif %}

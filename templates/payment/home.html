@@ -44,7 +44,7 @@
 </div>
 
 <!-- Modal: Yangi to‘lov qo‘shish -->
-<div class="modal fade" id="addPaymentModal" tabindex="-1" aria-labelledby="addPaymentLabel" aria-hidden="true">
+<div class="modal fade" id="addPaymentModal" tabindex="-1" aria-labelledby="addPaymentLabel" aria-hidden="true" >
   <div class="modal-dialog">
     <div class="modal-content">
       <form id="payment-form">
@@ -65,6 +65,11 @@
             <label class="form-label">To‘lov miqdori</label>
             <input type="number" name="amount" class="form-control" required>
           </div>
+            <div class="mb-3">
+            <label class="form-label">To‘lov sanasi</label>
+            <input type="date" name="payment_time" class="form-control">
+          </div>
+
         </div>
         <div class="modal-footer">
           <button type="submit" class="btn btn-primary">Saqlash</button>

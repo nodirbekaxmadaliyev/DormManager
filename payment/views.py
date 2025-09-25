@@ -1,9 +1,9 @@
 from django.views.generic.edit import CreateView
 from django.contrib.auth.mixins import LoginRequiredMixin
-from student.models import Student
+from django.db.models import Sum
 from datetime import date
 from dateutil.relativedelta import relativedelta
-from django.views.generic import ListView
+from django.views.generic import ListView, DetailView
 from django.views import View
 from django.http import JsonResponse, HttpResponse
 from django.template.loader import render_to_string
@@ -230,8 +230,8 @@ class PaymentListView(ListView):
         queryset = self.get_queryset()
 
         df = pd.DataFrame(list(queryset.values(
-            'student__first_name', 'student__last_name', 'student__room',
-            'amount', 'add_time'
+            'student__first_name', 'student__last_name', 'student__faculty', 'student__room__number',
+            'amount', 'add_time', 'payment_time'
         )))
 
         df.index += 1
@@ -240,9 +240,11 @@ class PaymentListView(ListView):
         df.rename(columns={
             'student__first_name': 'Ismi',
             'student__last_name': 'Familiyasi',
-            'student__room': 'Xonasi',
+            'student__room__number': 'Xonasi',
             'amount': 'To‘lov miqdori',
-            'add_time': 'Qo‘shilgan vaqt'
+            'add_time': 'Qo‘shilgan vaqt',
+            'payment_time': 'To`lov sanasi',
+            'student__faculty': 'Fakulteti'
         }, inplace=True)
 
         df['Qo‘shilgan vaqt'] = pd.to_datetime(df['Qo‘shilgan vaqt']).dt.strftime('%Y-%m-%d %H:%M')
@@ -257,7 +259,7 @@ class PaymentListView(ListView):
 
 class PaymentCreateView(LoginRequiredMixin, CreateView):
     model = Payment
-    fields = ['student', 'amount']
+    fields = ['student', 'amount', 'payment_time']
 
     def get_form(self, form_class=None):
         form = super().get_form(form_class)
@@ -294,4 +296,21 @@ class PaymentCreateView(LoginRequiredMixin, CreateView):
     def form_invalid(self, form):
         return JsonResponse({'success': False, 'errors': form.errors}, status=400)
 
+class PaymentDetailView(DetailView):
+    model = Payment
+    template_name = "payment/payment_detail.html"
+    context_object_name = "payment"
 
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        payment = self.get_object()
+        student = payment.student
+
+        # Shu talabaga oid barcha to‘lovlar
+        all_payments = Payment.objects.filter(student=student).order_by("-add_time")
+        total_amount = all_payments.aggregate(total=Sum("amount"))["total"] or 0
+
+        context["student"] = student
+        context["all_payments"] = all_payments
+        context["total_amount"] = total_amount
+        return context

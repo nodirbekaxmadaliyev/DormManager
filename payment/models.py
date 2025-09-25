@@ -9,6 +9,7 @@ class Payment(models.Model):
     amount = models.DecimalField(max_digits=10, decimal_places=2)
     added_by = models.ForeignKey(CustomUser, on_delete=models.SET_NULL, null=True, blank=True)
     add_time = models.DateTimeField(auto_now_add=True)
+    payment_time = models.DateField(null=True, blank=True)
 
     def __str__(self):
         return f"{self.student} - {self.amount} so‘m - {self.add_time.strftime('%Y-%m-%d %H:%M')}"

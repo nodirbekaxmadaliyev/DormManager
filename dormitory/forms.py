@@ -6,6 +6,12 @@ class RoomForm(forms.ModelForm):
         model = Room
         fields = ['dormitory', 'number', 'size']
 
+    def clean_number(self):
+        number = self.cleaned_data['number']
+        if Room.objects.filter(number=number).exists():
+            raise forms.ValidationError("Bu xona raqami allaqachon mavjud!")
+        return number
+
     def __init__(self, *args, **kwargs):
         user = kwargs.pop('user', None)
         super().__init__(*args, **kwargs)

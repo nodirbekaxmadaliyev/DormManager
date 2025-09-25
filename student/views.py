@@ -59,7 +59,7 @@ class StudentListView(ListView):
         if dormitory:
             queryset = queryset.filter(dormitory__name__icontains=dormitory)
         if room:
-            queryset = queryset.filter(room__icontains=room)
+            queryset = queryset.filter(room__number__icontains=room)
         if first_name:
             queryset = queryset.filter(first_name__icontains=first_name)
         if faculty:
