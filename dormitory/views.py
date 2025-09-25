@@ -23,7 +23,6 @@ def load_rooms(request):
 class RoomCreateView(CreateView):
     model = Room
     form_class = RoomForm
-    template_name = 'dormitory/room_form.html'  # ishlatilmaydi, modalda AJAX bo'ladi
     success_url = reverse_lazy('rooms')
 
     def get(self, request, *args, **kwargs):

@@ -7,8 +7,39 @@
 <div class="mb-3">
     <label for="id_number" class="form-label">Xona raqami</label>
     {{ form.number|add_class:"form-control" }}
+    <div class="invalid-feedback" id="error-id_number"></div>
 </div>
 <div class="mb-3">
     <label for="id_size" class="form-label">Sig‘imi</label>
     {{ form.size|add_class:"form-control" }}
+    <div class="invalid-feedback" id="error-id_size"></div>
 </div>
+
+<script>
+    $(document).on("submit", "#addRoomForm", function(e) {
+    e.preventDefault();  // sahifaga yo‘naltirmaslik uchun
+    let form = $(this);
+
+    $.ajax({
+        url: form.attr("action"),
+        type: "POST",
+        data: form.serialize(),
+        headers: { "X-Requested-With": "XMLHttpRequest" },
+        success: function(response) {
+            location.reload();  // muvaffaqiyatli bo‘lsa sahifani yangilash
+        },
+        error: function(xhr) {
+            let errors = xhr.responseJSON.errors;
+            $(".invalid-feedback").text("").hide();
+            $(".form-control, .form-select").removeClass("is-invalid");
+
+            for (let field in errors) {
+                let errorMsg = errors[field][0].message || errors[field][0];
+                $("#id_" + field).addClass("is-invalid");
+                $("#error-id_" + field).text(errorMsg).show();
+            }
+        }
+    });
+});
+
+</script>
