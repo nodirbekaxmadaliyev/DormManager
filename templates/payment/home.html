@@ -141,5 +141,46 @@ $(document).ready(function () {
         window.location.href = url;
     });
 });
+
+    $(document).ready(function () {
+    function fetchPayments(url = null) {
+        const formData = $("#search-form").serialize();
+        const finalUrl = url || ("{% url 'payments' %}?" + formData);
+
+        $.ajax({
+            url: finalUrl,
+            type: "GET",
+            data: formData,
+            headers: { "X-Requested-With": "XMLHttpRequest" },
+            success: function (data) {
+                $("#payments-table").html(data);
+
+                // Sahifani yangilagandan keyin ham pagination tugmalarini ishlatish
+                $(".page-btn").on("click", function (e) {
+                    e.preventDefault();
+                    const pageUrl = $(this).attr("href");
+                    fetchPayments(pageUrl);
+                });
+            },
+            error: function () {
+                console.error("Xatolik yuz berdi.");
+            }
+        });
+    }
+
+    // Qidiruv oynasi uchun
+    $(".search-input").on("keyup change", function () {
+        fetchPayments();
+    });
+
+    // Sahifalar bosilganda AJAX orqali yuklash
+    $(document).on("click", ".page-btn", function (e) {
+        e.preventDefault();
+        const pageUrl = $(this).attr("href");
+        fetchPayments(pageUrl);
+    });
+});
+
+
 </script>
 {% endblock %}

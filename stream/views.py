@@ -4,16 +4,13 @@ import json
 from django.db import transaction
 from django.utils.timezone import now
 import time
-import requests
-from requests.exceptions import RequestException, Timeout, ConnectionError
 import re
 
 from dormitory.models import Device
 from accounts.models import CustomUser
 from student.models import Student
 
-ipAdd = '109.199.101.108'
-REMOTE_STREAM_URL = f"http://{ipAdd}/stream/stream/"
+
 events = []  # Oxirgi eventlarni saqlash
 
 # Eventlarni va ularning qayta ishlanganligini kuzatish uchun
@@ -119,25 +116,6 @@ def hikvision_event(request):
                         student.save(update_fields=["is_in_dormitory"])
 
                         print(f"[STUDENT] {student.first_name} {student.last_name} is_in_dormitory -> {in_dorm}")
-
-                        # Remote serverga FAQAT 1 MARTA urinish
-                        try:
-                            response = requests.post(
-                                REMOTE_STREAM_URL,
-                                json={
-                                    "id": student.pk,
-                                    "message": f"{student.first_name} {student.last_name} --> {'KIRISH' if in_dorm else 'CHIQISH'}.\nVaqt: {event_json.get('dateTime') or now().isoformat()}"
-                                },
-                                timeout=2
-                            )
-
-                            if response.status_code == 200:
-                                print("✅ Remote serverga muvaffaqiyatli yuborildi.")
-                            else:
-                                print(f"⚠️ Remote server xato qaytardi: {response.text}")
-
-                        except (RequestException, Timeout, ConnectionError):
-                            print(f"⚠️ Remote serverga ulanib bo'lmadi.")
 
                     except Student.DoesNotExist:
                         print(f"Talaba {emp_no} topilmadi")
