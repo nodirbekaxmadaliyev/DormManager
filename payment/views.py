@@ -114,6 +114,8 @@ class DebtStatisticsView(ListView):
                 student.debt = round(debt, 2)
                 results.append(student)
 
+        results = sorted(results, key=lambda s: (s.first_name.lower(), s.last_name.lower()))
+
         return results
 
     def get_context_data(self, **kwargs):

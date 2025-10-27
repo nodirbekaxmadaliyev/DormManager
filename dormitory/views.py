@@ -16,6 +16,11 @@ from django.http import JsonResponse
 from django.urls import reverse_lazy
 from .forms import RoomForm
 from django.db.models import Count, F, IntegerField, Value, Case, When
+from decimal import Decimal, ROUND_HALF_UP
+from datetime import date
+from dateutil.relativedelta import relativedelta
+from django.views.generic import DetailView
+
 
 def load_rooms(request):
     dormitory_id = request.GET.get('dormitory')
@@ -215,7 +220,6 @@ class DormitorySelectView(ListView):
         return Dormitory.objects.none()
 
 
-
 class DormitoryDetailView(DetailView):
     model = Dormitory
     template_name = 'dormitory/dormitory_detail.html'
@@ -224,53 +228,54 @@ class DormitoryDetailView(DetailView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         dorm = self.get_object()
-        students = Student.objects.filter(dormitory=dorm)
+        students = Student.objects.filter(dormitory=dorm).select_related('dormitory')
 
         total_required = Decimal('0.00')
         total_paid = Decimal('0.00')
         total_debt = Decimal('0.00')
 
-        today = date.today()
+        this_year = date.today().year
+        july1_this_year = date(this_year, 7, 1)
+        today = july1_this_year if date.today() < july1_this_year else date(this_year + 1, 7, 1)
+        TWO_PLACES = Decimal('0.01')
 
         for student in students:
             if not student.arrival_time:
                 continue
 
             checkout = student.checkout_time or today
-
-            # 🔹 Barcha qiymatlar Decimal turiga keltirildi
             monthly = Decimal(dorm.monthly_payment or 0)
-            min_required_months = int(dorm.default_monthly_payment or 0)
+            min_required_months = Decimal(dorm.default_monthly_payment or 0)
             paid_total = Decimal(student.total_payment or 0)
 
-            # 🔹 O‘tgan oy va kunlar
             delta = relativedelta(checkout, student.arrival_time)
             months_passed = delta.years * 12 + delta.months
             extra_days = (checkout - (student.arrival_time + relativedelta(months=months_passed))).days
 
-            daily_payment = monthly / Decimal(30)
+            daily_payment = monthly / Decimal(30) if monthly else Decimal(0)
 
-            # 🔹 Minimal oy hisobga olingan holda umumiy kerakli to‘lov
-            if months_passed < min_required_months:
+            # 🔹 Xuddi DebtStatisticsView dagidek mantiq:
+            if Decimal(months_passed) < min_required_months:
                 required_total = Decimal(months_passed) * monthly + Decimal(extra_days) * daily_payment
             else:
-                required_total = Decimal(min_required_months) * monthly
-                remaining_months = months_passed - min_required_months
-                required_total += Decimal(remaining_months) * monthly + Decimal(extra_days) * daily_payment
+                required_total = min_required_months * monthly
 
-            debt = required_total - paid_total
-            if debt < 0:
-                debt = Decimal('0.00')
+            debt = max(required_total - paid_total, Decimal(0))
+
+            # 🔹 Yaxlitlash
+            required_total = required_total.quantize(TWO_PLACES, rounding=ROUND_HALF_UP)
+            paid_total = paid_total.quantize(TWO_PLACES, rounding=ROUND_HALF_UP)
+            debt = debt.quantize(TWO_PLACES, rounding=ROUND_HALF_UP)
 
             total_required += required_total
             total_paid += paid_total
             total_debt += debt
 
-        context["total_required"] = round(total_required, 2)
-        context["total_paid"] = round(total_paid, 2)
-        context["total_debt"] = round(total_debt, 2)
-        return context
+        context["total_required"] = total_required.quantize(TWO_PLACES, rounding=ROUND_HALF_UP)
+        context["total_paid"] = total_paid.quantize(TWO_PLACES, rounding=ROUND_HALF_UP)
+        context["total_debt"] = total_debt.quantize(TWO_PLACES, rounding=ROUND_HALF_UP)
 
+        return context
 
 class DormitoryUpdateView(UpdateView):
     model = Dormitory
