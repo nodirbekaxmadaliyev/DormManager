@@ -1,0 +1,181 @@
+{% extends "base.html" %}
+{% load widget_tweaks %}
+
+{% block content %}
+<div class="container mt-3">
+    <div class="card">
+        <div class="card-header bg-success text-white">
+            <h4 class="mb-0">Yangi Talaba Qo‘shish</h4>
+        </div>
+
+        <div class="card-body">
+            <form method="post" enctype="multipart/form-data">
+                {% csrf_token %}
+
+                {% if form.errors %}
+                <div class="alert alert-danger">
+                    <strong>Xatolik!</strong> Quyidagi maydonlarda xatoliklar mavjud:
+                    <ul>
+                        {% for field, errors in form.errors.items %}
+                            {% for error in errors %}
+                                <li>{{ field|capfirst }}: {{ error }}</li>
+                            {% endfor %}
+                        {% endfor %}
+                    </ul>
+                </div>
+                {% endif %}
+
+                <div class="row">
+                    <!-- Shaxsiy ma’lumotlar -->
+                    <div class="col-12 col-md-6">
+                        <h5 class="border-bottom pb-2">Shaxsiy ma’lumotlar</h5>
+
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                {{ form.first_name.label_tag }}
+                                {{ form.first_name|add_class:"form-control"|attr:"required" }}
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                {{ form.last_name.label_tag }}
+                                {{ form.last_name|add_class:"form-control"|attr:"required" }}
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            {{ form.dormitory.label_tag }}
+                            {{ form.dormitory|add_class:"form-select"|attr:"required" }}
+                        </div>
+
+                        <div class="mb-3">
+                            {{ form.room.label_tag }}
+                            {{ form.room|add_class:"form-select"|attr:"id=id_room"|attr:"required" }}
+                        </div>
+
+                        <div class="mb-3">
+                            {{ form.phone_number.label_tag }}
+                            {{ form.phone_number|add_class:"form-control"|attr:"required" }}
+                        </div>
+
+                        <div class="mb-3">
+                            {{ form.parent_full_name.label_tag }}
+                            {{ form.parent_full_name|add_class:"form-control"|attr:"required" }}
+                        </div>
+
+                        <div class="mb-3">
+                            {{ form.image.label_tag }}
+                            {{ form.image|add_class:"form-control"|attr:"required" }}
+                        </div>
+                    </div>
+
+                    <!-- Yotoqxona ma’lumotlari -->
+                    <div class="col-12 col-md-6">
+                        <h5 class="border-bottom pb-2">Yotoqxona ma’lumotlari</h5>
+
+                        <div class="mb-3">
+                            {{ form.faculty.label_tag }}
+                            {{ form.faculty|add_class:"form-control"|attr:"required" }}
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Holati*</label>
+                            <div class="form-check form-switch">
+                                {{ form.is_in_dormitory|add_class:"form-check-input"|attr:"required" }}
+                                <label class="form-check-label" for="{{ form.is_in_dormitory.id_for_label }}" id="statusLabel">Ichkarida</label>
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="id_arrival_time" class="form-label">Kelgan sana</label>
+                            <input type="date" name="arrival_time" id="id_arrival_time"
+                                   class="form-control" required
+                                   value="{{ form.arrival_time.value|date:'Y-m-d' }}">
+                            {% for error in form.arrival_time.errors %}
+                                <div class="text-danger small">{{ error }}</div>
+                            {% endfor %}
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="id_checkout_time" class="form-label">Ketgan sana</label>
+                            <input type="date" name="checkout_time" id="id_checkout_time"
+                                   class="form-control"
+                                   value="{{ form.checkout_time.value|date:'Y-m-d' }}">
+                            {% for error in form.checkout_time.errors %}
+                                <div class="text-danger small">{{ error }}</div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Shartnoma ma’lumotlari -->
+                <div class="row mt-3">
+                    <div class="col-12">
+                        <h5 class="border-bottom pb-2">Shartnoma ma’lumotlari</h5>
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                {{ form.contract_number.label_tag }}
+                                {{ form.contract_number|add_class:"form-control" }}
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="id_contract_date" class="form-label">Shartnoma sanasi</label>
+                                <input type="date" name="contract_date" id="id_contract_date"
+                                       class="form-control"
+                                       value="{{ form.contract_date.value|date:'Y-m-d' }}">
+                                {% for error in form.contract_date.errors %}
+                                    <div class="text-danger small">{{ error }}</div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Tugmalar -->
+                <div class="d-flex justify-content-between mt-4">
+                    <a href="{% url 'students' %}" class="btn btn-secondary">
+                        <i class="fas fa-times"></i> Bekor qilish
+                    </a>
+                    <button type="submit" class="btn btn-success">
+                        <i class="fas fa-save"></i> Saqlash
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Scriptlar -->
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const dormitorySelect = document.getElementById('id_dormitory');
+    const roomSelect = document.getElementById('id_room');
+    const statusSwitch = document.getElementById('id_is_in_dormitory');
+    const statusLabel = document.getElementById('statusLabel');
+
+    // Holatni matn bilan chiqarish
+    if (statusSwitch && statusLabel) {
+        statusSwitch.addEventListener('change', function () {
+            statusLabel.textContent = this.checked ? 'Ichkarida' : 'Tashqarida';
+        });
+    }
+
+    // Dormitory bo‘yicha xonalarni yuklash
+    if (dormitorySelect && roomSelect) {
+        dormitorySelect.addEventListener('change', function () {
+            const dormitoryId = this.value;
+            if (!dormitoryId) return;
+
+            fetch(`/students/ajax/load-rooms/?dormitory=${dormitoryId}`)
+                .then(response => response.json())
+                .then(data => {
+                    roomSelect.innerHTML = '<option value="">Xona tanlang</option>';
+                    data.forEach(room => {
+                        const option = document.createElement('option');
+                        option.value = room.id;
+                        option.textContent = room.number;
+                        roomSelect.appendChild(option);
+                    });
+                });
+        });
+    }
+});
+</script>
+{% endblock %}

@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.5/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-SgOJa3DmI69IUzQ2PVdRZhwQ+dy64/BUtbMJw1MZ8t5HZApcHrRKUc4W0kG879m7" crossorigin="anonymous">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
+    <!-- Select2 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta charset="UTF-8">
+    <title>DormManager</title>
+
+    <style>
+  /* Offcanvasning kengligini 70% qilish */
+  .offcanvas-custom {
+    width: 70% !important;
+    max-width: 400px; /* Istalgan maksimal chegaralash */
+    background: #f8f9fa;
+    border-right: 1px solid #dee2e6;
+  }
+
+  /* Elementlarga biroz estetik ko‘rinish */
+  .offcanvas-custom .nav-link {
+    font-weight: 500;
+    font-size: 1.1rem;
+    padding: 10px 0;
+    color: #343a40;
+  }
+
+  .offcanvas-custom .nav-link:hover {
+    color: #0d6efd;
+  }
+
+  .offcanvas-custom .offcanvas-header {
+    background-color: #e9ecef;
+  }
+</style>
+
+
+</head>
+<body>
+
+<!-- Navbar -->
+<nav class="navbar bg-body-tertiary" data-bs-theme="dark">
+  <div class="container-fluid">
+    <a class="navbar-brand" href="{% url 'dashboard' %}">
+      <img src="/media/images/icon.png" alt="Logo" style="width:30px; height:30px; border-radius:7px" class="d-inline-block align-text-top">
+      DormManage
+    </a>
+    <div class="ms-auto" style="margin: 0 10px;">
+      <a href="#" class="text-primary text-decoration-underline" data-bs-toggle="modal" data-bs-target="#userInfoModal">
+        {{ user.first_name }}
+      </a>
+    </div>
+  </div>
+</nav>
+
+
+<!-- Ikkinchi Navbar -->
+<nav class="navbar bg-body-tertiary">
+  <div class="container-fluid">
+
+    <!-- Mobil uchun menyu tugmasi -->
+    <button class="btn btn-outline-dark d-lg-none" type="button" data-bs-toggle="offcanvas" data-bs-target="#mobileMenu" aria-controls="mobileMenu">
+      <i class="fas fa-bars"></i>
+    </button>
+
+    <!-- Katta ekranlar uchun menyu -->
+    <div class="d-none d-lg-flex gap-3 align-items-center">
+
+  <a class="nav-link" href="{% url 'dormitories' %}">🏠 Yotoqxonalar</a>
+  <a class="nav-link" href="{% url 'employees' %}"><strong>👨‍💼 Hodimlar</strong></a>
+  <a class="nav-link" href="{% url 'rooms' %}">🛏️ Xonalar</a>
+
+  <a class="nav-link" href="{% url 'students' %}"><strong>🎓 Talabalar</strong></a>
+
+  <div class="nav-item dropdown">
+    <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+      <strong>💳 To‘lov</strong>
+    </a>
+    <ul class="dropdown-menu">
+      <li><a class="dropdown-item link-primary" href="{% url 'payments' %}"><strong>💳 To‘lovlar</strong></a></li>
+      <li><a class="dropdown-item link-success" href="{% url 'debt_statistics' %}"><strong>📊 Statistika</strong></a></li>
+    </ul>
+  </div>
+
+  <a class="nav-link" href="{% url 'logs' %}"><strong>📋 Loglar</strong></a>
+  <a class="nav-link" href="{% url 'expense_list' %}"><strong>💸 Chiqimlar</strong></a>
+</div>
+
+
+  </div>
+</nav>
+
+<div class="offcanvas offcanvas-start offcanvas-custom" tabindex="-1" id="mobileMenu" aria-labelledby="mobileMenuLabel">
+  <div class="offcanvas-header">
+    <h5 class="offcanvas-title" id="mobileMenuLabel">Menyu</h5>
+    <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Yopish"></button>
+  </div>
+  <div class="offcanvas-body">
+    <ul class="navbar-nav">
+      <li class="nav-item">
+        <a class="nav-link" href="{% url 'dormitories' %}">🏠 Yotoqxona hisobi</a>
+      </li>
+      <li class="nav-item">
+        <a class="nav-link" href="{% url 'employees' %}">👨‍💼 Hodimlar</a>
+      </li>
+      <li class="nav-item">
+        <a class="nav-link" href="{% url 'rooms' %}">🛏️ Xonalar</a>
+      </li>
+      <li class="nav-item">
+        <a class="nav-link" href="{% url 'students' %}">🎓 Talabalar</a>
+      </li>
+      <li class="nav-item dropdown">
+          <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+            <strong>💳 To'lov</strong>
+          </a>
+          <ul class="dropdown-menu">
+            <li><a class="dropdown-item link-primary link-offset-2 link-underline-opacity-25 link-underline-opacity-100-hover" style="color: gold;" href="{% url 'payments' %}"><strong>💳 To'lovlar</strong></a></li>
+            <li><a class="dropdown-item link-success link-offset-2 link-underline-opacity-25 link-underline-opacity-100-hover" style="color: gold;" href="{% url 'debt_statistics' %}"><strong>📊 Statistika</strong></a></li>
+          </ul>
+        </li>
+      <li class="nav-item">
+        <a class="nav-link" href="{% url 'logs' %}">📋 Loglar</a>
+      </li>
+      <li class="nav-item">
+       <a class="nav-link" href="{% url 'expense_list' %}"><strong>💸 Chiqimlar</strong></a>
+      </li>
+
+    </ul>
+  </div>
+</div>
+
+
+<!-- User Info Modal -->
+<div class="modal fade" id="userInfoModal" tabindex="-1" aria-labelledby="userInfoModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+
+      <div class="modal-header">
+        <h5 class="modal-title" id="userInfoModalLabel">Hodim Ma'lumotlari</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Yopish"></button>
+      </div>
+
+      <div class="modal-body text-center">
+        <!-- User Photo -->
+        {% if user.photo %}
+          <img src="{{ user.photo.url }}" class="rounded-circle mb-3" alt="Foydalanuvchi surati" style="width: 120px; height: 120px; object-fit: cover;">
+        {% endif %}
+
+        <!-- User Full Name -->
+        <h4>{{ user.first_name }} {{ user.last_name }}</h4>
+        <h6>{{ user.username }}</h6>
+        <!-- User Role -->
+        <p class="text-muted">{{ user.get_role_display }}</p>
+
+        <!-- Work Time -->
+        <p><strong>Ish vaqti:</strong><br>
+          {% if user.work_start and user.work_end %}
+            {{ user.work_start }} - {{ user.work_end }}
+          {% else %}
+            Belgilanmagan
+          {% endif %}
+        </p>
+
+        <!-- Salary -->
+        <p><strong>Maosh:</strong><br>
+          {% if user.salary %}
+            {{ user.salary }} so'm
+          {% else %}
+            Belgilanmagan
+          {% endif %}
+        </p>
+
+        <!-- Dormitory Status -->
+        <p><strong>Status:</strong><br>
+          {% if user.is_in_dormitory %}
+            <span class="badge bg-success">Yotoqxonada</span>
+          {% else %}
+            <span class="badge bg-secondary">Tashqarida</span>
+          {% endif %}
+        </p>
+
+      </div>
+
+      <div class="modal-footer flex-column">
+    <form action="{% url 'logout' %}" method="post" class="w-100">
+        {% csrf_token %}
+        <button type="submit" class="btn btn-danger w-100 mb-2">Chiqish</button>
+    </form>
+        <a href="{% url 'change_password' %}" class="btn btn-warning w-100 mb-2">Parolni o'zgartirish</a>
+    <button type="button" class="btn btn-secondary w-100" data-bs-dismiss="modal">
+        Yopish
+    </button>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+{% if messages %}
+  {% for message in messages %}
+    <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+      {{ message }}
+      <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+  {% endfor %}
+{% endif %}
+
+
+<button id="scrollToTopBtn" onclick="topFunction()" style="display: none; position: fixed; bottom: 20px; right: 20px; background-color: #dc3545; color: white; padding: 10px 15px; border: none; border-radius: 5px; cursor: pointer; z-index: 1000;">
+    ⬆ Yuqoriga
+</button>
+
+<script>
+
+// Yuqoriga chiqishga
+    window.onscroll = function() { scrollFunction() };
+
+    function scrollFunction() {
+        var scrollToTopBtn = document.getElementById("scrollToTopBtn");
+
+        if (document.body.scrollTop > 1500 || document.documentElement.scrollTop > 1500) {
+            scrollToTopBtn.style.display = "block";
+        } else {
+            scrollToTopBtn.style.display = "none";
+        }
+    }
+
+    function topFunction() {
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+</script>
+{% block content %}
+{% endblock %}
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.5/dist/js/bootstrap.bundle.min.js" integrity="sha384-k6d4wzSIapyDyv1kpU366/PK5hCdSbCRGRCMv+eplOQJWyd1fbcAu9OCUj5zNLiq" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+{% block extra_scripts %}{% endblock %}
+
+</body>
+</html>

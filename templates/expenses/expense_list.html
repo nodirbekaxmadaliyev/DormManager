@@ -1,0 +1,131 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="container mt-4">
+    <h3>Chiqimlar</h3>
+
+    <div class="mb-3">
+        <span>Bu oy: <b>{{ monthly_total }}</b></span> |
+        <span>Bu yil: <b>{{ yearly_total }}</b></span> |
+        <span>Jami: <b>{{ all_total }}</b></span>
+    </div>
+
+    <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#createExpenseModal">
+        + Chiqim qo'shish
+    </button>
+
+    <table class="table mt-3">
+        <thead>
+            <tr>
+                <th>Yotoqxona</th>
+                <th>Summa</th>
+                <th>Izoh</th>
+                <th>Qo'shgan</th>
+                <th>Vaqt</th>
+                {% if user.role == "director" %}
+                    <th>Amallar</th>
+                {% endif %}
+            </tr>
+        </thead>
+        <tbody>
+            {% for expense in expenses %}
+            <tr>
+                <td>{{ expense.dormitory.name }}</td>
+                <td>{{ expense.amount }}</td>
+                <td>{{ expense.note }}</td>
+                <td>{{ expense.created_by.get_full_name }}</td>
+                <td>{{ expense.created_at|date:"Y-m-d H:i" }}</td>
+                {% if user.role == "director" %}
+                <td>
+                    <button class="btn btn-sm btn-warning" data-bs-toggle="modal" data-bs-target="#updateExpenseModal{{ expense.id }}">Tahrirlash</button>
+                    <button class="btn btn-sm btn-danger" data-bs-toggle="modal" data-bs-target="#deleteExpenseModal{{ expense.id }}">O'chirish</button>
+                </td>
+                {% endif %}
+            </tr>
+
+            <!-- Update Modal -->
+            <div class="modal fade" id="updateExpenseModal{{ expense.id }}" tabindex="-1">
+              <div class="modal-dialog">
+                <div class="modal-content">
+                  <form method="post" action="{% url 'expense_update' expense.id %}">
+                    {% csrf_token %}
+                    <div class="modal-header"><h5>Tahrirlash</h5></div>
+                    <div class="modal-body">
+                        <input type="number" name="amount" value="{{ expense.amount }}" class="form-control mb-2">
+                        <textarea name="note" class="form-control">{{ expense.note }}</textarea>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="submit" class="btn btn-success">Saqlash</button>
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Bekor qilish</button>
+                    </div>
+                  </form>
+                </div>
+              </div>
+            </div>
+
+            <!-- Delete Modal -->
+            <div class="modal fade" id="deleteExpenseModal{{ expense.id }}" tabindex="-1">
+              <div class="modal-dialog">
+                <div class="modal-content">
+                  <form method="post" action="{% url 'expense_delete' expense.id %}">
+                    {% csrf_token %}
+                    <div class="modal-header"><h5>O'chirish</h5></div>
+                    <div class="modal-body">
+                        <p>Haqiqatan ham ushbu chiqimni o'chirmoqchimisiz?</p>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="submit" class="btn btn-danger">Ha, o'chir</button>
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Bekor qilish</button>
+                    </div>
+                  </form>
+                </div>
+              </div>
+            </div>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+
+<!-- Create Modal -->
+<div class="modal fade" id="createExpenseModal" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <form method="post" action="{% url 'expense_create' %}">
+        {% csrf_token %}
+        <div class="modal-header">
+          <h5 class="modal-title">Chiqim qo'shish</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+
+        <div class="modal-body">
+          <input type="number" step="0.01" name="amount" placeholder="Summa" class="form-control mb-2" required>
+          <textarea name="note" placeholder="Izoh" class="form-control mb-2" rows="3" required></textarea>
+
+          {% if user.employee %}
+            <!-- Xodim uchun TTJ readonly -->
+            <label class="form-label">Yotoqxona</label>
+            <input type="text" class="form-control mb-2" value="{{ user.employee.dormitory.name }}" readonly>
+            <input type="hidden" name="dormitory" value="{{ user.employee.dormitory.id }}">
+          {% elif dormitories %}
+            <!-- Direktor uchun TTJ tanlanadi -->
+            <label class="form-label">Yotoqxona tanlang</label>
+            <select name="dormitory" class="form-select mb-2" required>
+                {% for dorm in dormitories %}
+                <option value="{{ dorm.id }}">{{ dorm.name }}</option>
+                {% endfor %}
+            </select>
+          {% endif %}
+        </div>
+
+        <div class="modal-footer">
+          <button type="submit" class="btn btn-success">Qo'shish</button>
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Bekor qilish</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+{% endblock %}

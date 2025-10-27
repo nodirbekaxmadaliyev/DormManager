@@ -1,0 +1,117 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load widget_tweaks %}
+
+{% block content %}
+<div class="container my-5">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="card shadow rounded-4">
+                <div class="card-header bg-primary text-white text-center rounded-top-4">
+                    <h2 class="mb-0">Yangi Hodim Qo'shish</h2>
+                </div>
+                <div class="card-body">
+                    <form method="post" enctype="multipart/form-data" novalidate>
+                        {% csrf_token %}
+
+                        <!-- First Name -->
+                        <div class="mb-3">
+                            <label for="{{ form.first_name.id_for_label }}" class="form-label">Ism</label>
+                            {{ form.first_name|add_class:"form-control" }}
+                            {% for error in form.first_name.errors %}
+                                <div class="text-danger small">{{ error }}</div>
+                            {% endfor %}
+                        </div>
+
+                        <!-- Last Name -->
+                        <div class="mb-3">
+                            <label for="{{ form.last_name.id_for_label }}" class="form-label">Familiya</label>
+                            {{ form.last_name|add_class:"form-control" }}
+                            {% for error in form.last_name.errors %}
+                                <div class="text-danger small">{{ error }}</div>
+                            {% endfor %}
+                        </div>
+
+                        <!-- Yotoqxona (Dormitory) -->
+<div class="mb-3">
+    <label for="{{ form.dormitory.id_for_label }}" class="form-label">Yotoqxona</label>
+    {{ form.dormitory|add_class:"form-select" }}
+    {% for error in form.dormitory.errors %}
+        <div class="text-danger small">{{ error }}</div>
+    {% endfor %}
+</div>
+
+                        <!-- Telefon -->
+                        <div class="mb-3">
+                            <label for="{{ form.phone_number.id_for_label }}" class="form-label">Telefon raqami</label>
+                            {{ form.phone_number|add_class:"form-control" }}
+                            {% for error in form.phone_number.errors %}
+                                <div class="text-danger small">{{ error }}</div>
+                            {% endfor %}
+                        </div>
+
+                        <!-- Ish boshlanish va tugash -->
+                        <div class="row">
+    <div class="col-md-6 mb-3">
+        <label for="id_work_start" class="form-label">Ish boshlanish vaqti</label>
+        <input type="time" name="work_start" id="id_work_start"
+               class="form-control"
+               value="{{ form.work_start.value|time:'H:i' }}">
+        {% for error in form.work_start.errors %}
+            <div class="text-danger small">{{ error }}</div>
+        {% endfor %}
+    </div>
+
+    <div class="col-md-6 mb-3">
+        <label for="id_work_end" class="form-label">Ish tugash vaqti</label>
+        <input type="time" name="work_end" id="id_work_end"
+               class="form-control"
+               value="{{ form.work_end.value|time:'H:i' }}">
+        {% for error in form.work_end.errors %}
+            <div class="text-danger small">{{ error }}</div>
+        {% endfor %}
+    </div>
+</div>
+
+<!-- Ishga qabul sanasi -->
+<div class="mb-3">
+    <label for="id_hire_date" class="form-label">Ishga kirgan sana</label>
+    <input type="date" name="hire_date" id="id_hire_date"
+           class="form-control"
+           value="{{ form.hire_date.value|date:'Y-m-d' }}">
+    {% for error in form.hire_date.errors %}
+        <div class="text-danger small">{{ error }}</div>
+    {% endfor %}
+</div>
+
+
+                        <!-- Surat yuklash -->
+                        <div class="mb-3">
+                            <label for="{{ form.photo.id_for_label }}" class="form-label">Hodim rasmi <span class="text-danger">*</span></label>
+                            {{ form.photo|add_class:"form-control" }}
+                            {% for error in form.photo.errors %}
+                                <div class="text-danger small">{{ error }}</div>
+                            {% endfor %}
+                        </div>
+
+                        <!-- Maosh -->
+                        <div class="mb-3">
+                            <label for="{{ form.salary.id_for_label }}" class="form-label">Maosh (so'mda)</label>
+                            {{ form.salary|add_class:"form-control" }}
+                            {% for error in form.salary.errors %}
+                                <div class="text-danger small">{{ error }}</div>
+                            {% endfor %}
+                        </div>
+
+                        <!-- Submit -->
+                        <div class="text-center mt-4">
+                            <button type="submit" class="btn btn-success px-5">Saqlash</button>
+                        </div>
+
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,29 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="container mt-4">
+    <h3 class="mb-3">{{ dorm.name }} - Statistikasi</h3>
+
+    <div class="mb-3">
+        <p><strong>Manzil:</strong> {{ dorm.address }}</p>
+        <p><strong>Oylik to‘lov:</strong> {{ dorm.monthly_payment }} so‘m</p>
+        <p><strong>Boshlang‘ich oy to‘lovi:</strong> {{ dorm.default_monthly_payment }} oy</p>
+    </div>
+
+    <a href="{% url 'dormitory_edit' dorm.pk %}" class="btn btn-warning mb-3">✏️ Tahrirlash</a>
+
+    <div class="card">
+        <div class="card-header"><strong>To‘lov statistikasi</strong></div>
+        <div class="card-body">
+            <p><strong>Umumiy kerakli to‘lov:</strong> {{ total_required|floatformat:0 }} so‘m</p>
+            <p><strong>Umumiy to‘langan:</strong> {{ total_paid|floatformat:0 }} so‘m</p>
+            <p><strong>Hozirdagi qarzdorlik:</strong>
+                {% if total_debt > 0 %}
+                <span class="text-danger">{{ total_debt|floatformat:0 }} so‘m</span>
+                {% else %}
+                <span class="text-success">0 so‘m</span>
+                {% endif %}
+            </p>
+        </div>
+    </div>
+</div>
+{% endblock %}

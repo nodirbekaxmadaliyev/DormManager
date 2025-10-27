@@ -1,0 +1,40 @@
+{% extends 'base.html' %}
+{% block content %}
+{% load widget_tweaks %}
+<div class="container mt-5">
+    <div class="card shadow">
+        <div class="card-header bg-primary text-white text-center">
+            <h4>🏢 Yotoqxonani tahrirlash</h4>
+        </div>
+        <div class="card-body">
+            <form method="post" novalidate>
+                {% csrf_token %}
+                <div class="mb-3">
+                    <label for="id_name" class="form-label">🏷️ Nomi</label>
+                    {{ form.name|add_class:"form-control" }}
+                </div>
+                <div class="mb-3">
+                    <label for="id_address" class="form-label">📍 Manzili</label>
+                    {{ form.address|add_class:"form-control" }}
+                </div>
+                <div class="mb-3">
+                    <label for="id_monthly_payment" class="form-label">💰 Oylik to‘lov miqdori (so‘m)</label>
+                    {{ form.monthly_payment|add_class:"form-control" }}
+                </div>
+                <div class="mb-3">
+                    <label for="id_default_monthly_payment" class="form-label">📆 Boshlang‘ich oylar soni</label>
+                    {{ form.default_monthly_payment|add_class:"form-control" }}
+                </div>
+                <div class="d-flex justify-content-between">
+                    <a href="{% url 'dormitories' %}" class="btn btn-secondary">
+                        ⬅️ Orqaga
+                    </a>
+                    <button type="submit" class="btn btn-success">
+                        💾 Saqlash
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

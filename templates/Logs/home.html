@@ -1,0 +1,161 @@
+{% extends 'base.html' %}
+{% block content %}
+
+<div class="container py-5">
+    <h2 class="mb-4 text-center">📋 Kirish-chiqish loglari</h2>
+
+    <form method="get" class="row g-3 align-items-end bg-white p-4 rounded shadow-sm mb-4 border">
+    <div class="col-md-3">
+        <label for="start_time" class="form-label">Boshlanish vaqti</label>
+        <input type="datetime-local" class="form-control" id="start_time" name="start_time" value="{{ start_time_default|date:'Y-m-d\\TH:i' }}">
+    </div>
+    <div class="col-md-3">
+        <label for="end_time" class="form-label">Tugash vaqti</label>
+        <input type="datetime-local" class="form-control" id="end_time" name="end_time" value="{{ end_time_default|date:'Y-m-d\\TH:i' }}">
+    </div>
+    <div class="col-md-3">
+        <label for="dormitory" class="form-label">Yotoqxona</label>
+        <select class="form-select" name="dormitory" id="dormitory" required>
+            {% if not selected_dormitory %}
+                <option value="" selected>-- Tanlang --</option>
+            {% else %}
+                <option value="">-- Tanlang --</option>
+            {% endif %}
+            {% for dorm in dormitories %}
+                <option value="{{ dorm.id }}" {% if dorm.id == selected_dormitory %}selected{% endif %}>
+                    {{ dorm.name }}
+                </option>
+            {% endfor %}
+        </select>
+    </div>
+
+    <div class="col-md-1">
+        <button type="submit" class="btn btn-primary w-100 h-100">🔍 Ko‘rish</button>
+    </div>
+
+    <div class="col-md-2">
+        <button type="submit" name="export" value="excel" class="btn btn-success w-100 h-100">
+            📁 Excel ZIP Yuklash
+        </button>
+    </div>
+</form>
+
+
+
+    <div class="d-flex justify-content-center mb-4">
+        <div class="card shadow-sm border-primary" style="max-width: 300px; width: 100%;">
+            <div class="card-body text-center">
+                <p class="card-text mb-1"><strong id="visible-count">0</strong> ta log ko'rsatilmoqda</p>
+                <p class="card-text text-muted">Jami loglar soni: <strong>{{ logsNumber }}</strong></p>
+            </div>
+        </div>
+    </div>
+
+    {% if logs %}
+    <div class="table-responsive bg-white rounded shadow-sm">
+        <table id="logs-table" class="table table-hover align-middle">
+            <thead class="table-primary">
+                <tr>
+                    <th scope="col">👤 F.I.</th>
+                    <th scope="col">⏰ Vaqt</th>
+                    <th scope="col">📍 Holat</th>
+                    <th scope="col">To'liq</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for log in logs %}
+                <tr>
+                    <td>{{ log.name }}</td>
+                    <td>{{ log.time }}</td>
+                    <td>{{ log.status }}</td>
+                    <td>
+                        {% if log.employeeNo < 1000 %}
+                            {% if user.role == 'director' and log.exists %}
+                                <a href="{% url 'employee_update' log.employeeNo %}" class="btn btn-sm btn-primary">Hodim</a>
+                            {% else %}
+                                <button class="btn btn-sm btn-secondary" disabled>Hodim</button>
+                            {% endif %}
+                        {% else %}
+                            {% if log.exists %}
+                                <a href="{% url 'student_detail' log.employeeNo %}" class="btn btn-sm btn-success">Talaba</a>
+                            {% else %}
+                                <button class="btn btn-sm btn-secondary" disabled>Talaba</button>
+                            {% endif %}
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Pagination -->
+<div class="row mt-4">
+    <div class="col-12">
+        <nav aria-label="Logs pagination">
+            <ul class="pagination justify-content-center flex-wrap" id="pagination"></ul>
+        </nav>
+    </div>
+</div>
+
+
+    {% else %}
+    <div class="alert alert-warning text-center">Loglar topilmadi.</div>
+    {% endif %}
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const rowsPerPage = 30;
+    const tableBody = document.querySelector('#logs-table tbody');
+    const rows = tableBody.querySelectorAll('tr');
+    const pagination = document.getElementById('pagination');
+    const pageCount = Math.ceil(rows.length / rowsPerPage);
+    const visibleCountEl = document.getElementById('visible-count');
+
+    function showPage(page) {
+        const start = (page - 1) * rowsPerPage;
+        const end = start + rowsPerPage;
+        let visibleCount = 0;
+
+        rows.forEach((row, index) => {
+            if (index >= start && index < end) {
+                row.style.display = '';
+                visibleCount++;
+            } else {
+                row.style.display = 'none';
+            }
+        });
+
+        visibleCountEl.textContent = visibleCount;
+
+        Array.from(pagination.children).forEach((li, idx) => {
+            li.classList.toggle('active', idx === page - 1);
+        });
+    }
+
+    if (pageCount <= 1) {
+        pagination.style.display = 'none';
+    } else {
+        for (let i = 1; i <= pageCount; i++) {
+            const li = document.createElement('li');
+            li.className = 'page-item' + (i === 1 ? ' active' : '');
+            const a = document.createElement('a');
+            a.className = 'page-link';
+            a.href = '#';
+            a.textContent = i;
+            a.addEventListener('click', function(e) {
+                e.preventDefault();
+                showPage(i);
+                document.querySelector('.container').scrollIntoView({behavior: 'smooth'});
+            });
+            li.appendChild(a);
+            pagination.appendChild(li);
+        }
+    }
+
+    showPage(1);
+});
+</script>
+
+{% endblock %}

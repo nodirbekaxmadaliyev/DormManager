@@ -1,0 +1,239 @@
+{% extends "base.html" %}
+{% block content %}
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h2 class="text-center flex-grow-1">Xonalar</h2>
+    <div class="d-flex gap-2">
+        <!-- Qo‘shish modalini ochuvchi tugma -->
+        <button type="button" class="btn btn-success" data-bs-toggle="modal" data-bs-target="#addRoomModal">
+            ➕ Qo‘shish
+        </button>
+
+        <!-- Excel yuklash -->
+        <button type="button" id="export-btn" class="btn btn-primary">
+            📥 Yuklash
+        </button>
+
+    </div>
+</div>
+        {% if dormitory_stats %}
+<div class="container mt-3">
+    {% if request.user.employee %}
+        {% for stat in dormitory_stats %}
+            <div class="alert alert-info shadow-sm">
+                <h5 class="mb-2">{{ stat.name }}</h5>
+                <p class="mb-0">
+                    <strong>Jami sig‘im:</strong> {{ stat.capacity }} |
+                    <strong>Talabalar soni:</strong> {{ stat.student_count }} |
+                    <strong>Bo‘sh o‘rinlar:</strong> {{ stat.empty_slots }}
+                </p>
+            </div>
+        {% endfor %}
+    {% elif request.user.director %}
+        <div class="row">
+            {% for stat in dormitory_stats %}
+                <div class="col-md-4 mb-3">
+                    <div class="alert alert-info shadow-sm h-100">
+                        <h5 class="mb-2">{{ stat.name }}</h5>
+                        <p class="mb-0">
+                            <strong>Jami xonalar:</strong> {{ stat.room_count }}<br>
+                            <strong>Sig‘imi:</strong> {{ stat.capacity }}<br>
+                            <strong>Talabalar:</strong> {{ stat.student_count }}<br>
+                            <strong>Bo‘sh joylar:</strong> {{ stat.empty_slots }}
+                        </p>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+    {% endif %}
+</div>
+{% endif %}
+
+
+<div class="container mt-3">
+    <h5><strong>Topilgan xonalar soni:</strong> {{ total_count }}</h5>
+</div>
+
+<!-- 🔹 Filter form -->
+<div class="container mt-3">
+    <form id="search-form" method="get">
+        <table class="table table-striped align-middle">
+            <thead>
+                <tr>
+                    <th>Yotoqxona</th>
+                    <th>Xona raqami</th>
+                    <th>Holati</th>
+                    <th>Amal</th>
+                </tr>
+                <tr>
+                    <td>
+
+                        <input type="text" name="dormitory" class="form-control"
+                               placeholder="Yotoqxona" value="{{ request.GET.dormitory }}">
+
+                    </td>
+                    <td>
+                        <input type="text" name="number" class="form-control"
+                               placeholder="Raqam..." value="{{ request.GET.number }}">
+                    </td>
+                    <td>
+                        <select name="status" class="form-select" onchange="this.form.submit()">
+                            <option value="">Barchasi</option>
+                            <option value="free" {% if request.GET.status == 'free' %}selected{% endif %}>Joy bor</option>
+                            <option value="full" {% if request.GET.status == 'full' %}selected{% endif %}>To‘lgan</option>
+                        </select>
+                    </td>
+                    <td>
+                        <button type="submit" class="btn btn-secondary btn-sm">Qidirish</button>
+                    </td>
+                </tr>
+            </thead>
+        </table>
+    </form>
+</div>
+
+<!-- 🔹 Jadval -->
+<div class="container mt-3">
+    <table class="table table-striped align-middle">
+        <thead>
+            <tr>
+                <th>Yotoqxona</th>
+                <th>Xona raqami</th>
+                <th>Bo‘sh joy / Sig‘imi</th>
+                <th>Harakatlar</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for room in object_list %}
+            <tr>
+                <td>{{ room.dormitory.name }}</td>
+                <td>{{ room.number }}</td>
+                <td>{{ room.empty_slots }} / {{ room.size }}</td>
+                <td>
+                    <a href="{% url 'room_detail' room.pk %}" class="btn btn-success btn-sm">Batafsil</a>
+                </td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="4" class="text-center">Xonalar topilmadi.</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<!-- 🔹 Paginatsiya -->
+{% if is_paginated %}
+<nav class="mt-3">
+    <ul class="pagination justify-content-center">
+        {% if page_obj.has_previous %}
+        <li class="page-item">
+            <a class="page-link"
+               href="?page={{ page_obj.previous_page_number }}{% if request.GET.dormitory %}&dormitory={{ request.GET.dormitory }}{% endif %}{% if request.GET.number %}&number={{ request.GET.number }}{% endif %}{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}">
+               «
+            </a>
+        </li>
+        {% endif %}
+
+        {% for num in page_obj.paginator.page_range %}
+        <li class="page-item {% if page_obj.number == num %}active{% endif %}">
+            <a class="page-link"
+               href="?page={{ num }}{% if request.GET.dormitory %}&dormitory={{ request.GET.dormitory }}{% endif %}{% if request.GET.number %}&number={{ request.GET.number }}{% endif %}{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}">
+               {{ num }}
+            </a>
+        </li>
+        {% endfor %}
+
+        {% if page_obj.has_next %}
+        <li class="page-item">
+            <a class="page-link"
+               href="?page={{ page_obj.next_page_number }}{% if request.GET.dormitory %}&dormitory={{ request.GET.dormitory }}{% endif %}{% if request.GET.number %}&number={{ request.GET.number }}{% endif %}{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}">
+               »
+            </a>
+        </li>
+        {% endif %}
+    </ul>
+</nav>
+{% endif %}
+
+<!-- Modal -->
+<div class="modal fade" id="addRoomModal" tabindex="-1" aria-labelledby="addRoomModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <form id="addRoomForm" method="post" action="{% url 'room_add' %}">
+  {% csrf_token %}
+        <div class="modal-header">
+          <h5 class="modal-title" id="addRoomModalLabel">Yangi xona qo‘shish</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Yopish"></button>
+        </div>
+        <div class="modal-body" id="room-form-body">
+          <!-- Forma dinamik yuklanadi -->
+        </div>
+        <div class="modal-footer">
+          <button type="submit" class="btn btn-primary">Saqlash</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script>
+$("#export-btn").on("click", function() {
+    const params = $("#search-form").serialize();
+    const url = `{% url 'rooms' %}?${params}&export=excel`;
+    window.location.href = url;
+});
+    $(document).ready(function () {
+    $('#addRoomModal').on('show.bs.modal', function () {
+    $.ajax({
+        url: "{% url 'room_add' %}",
+        type: "GET",
+        headers: { "X-Requested-With": "XMLHttpRequest" },
+        success: function (data) {
+            $('#room-form-body').html(data.form_html);  // << To'g'rilandi
+        },
+        error: function (xhr) {
+            $('#room-form-body').html('<div class="text-danger">Xatolik yuz berdi</div>');
+        }
+    });
+});
+});
+
+    $(".search-input, .search-select").on("keyup change", function () {
+        let formData = $("#search-form").serialize();
+
+        $.ajax({
+            url: "{% url 'rooms' %}",
+            type: "GET",
+            data: formData,
+            headers: {
+                "X-Requested-With": "XMLHttpRequest"
+            },
+            success: function (data) {
+                $("tbody").html($(data).find("tbody").html());
+                $("#total-count").text($(data).find("#total-count").text());
+            },
+            error: function (xhr, status, error) {
+                console.log("Xatolik:", error);
+            }
+        });
+    });
+
+</script>
+
+<style>
+.card {
+    transition: all 0.25s ease-in-out;
+}
+.card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.12);
+}
+.card-title {
+    font-size: 1.1rem;
+}
+</style>
+
+
+{% endblock %}

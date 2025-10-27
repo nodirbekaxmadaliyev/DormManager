@@ -1,0 +1,145 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block content %}
+<div class="container mt-3">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h2 class="text-center flex-grow-1">To‘lovlar</h2>
+        <div>
+            <button class="btn btn-success" data-bs-toggle="modal" data-bs-target="#addPaymentModal">Qo‘shish</button>
+            <button id="export-btn" class="btn btn-primary">Yuklash</button>
+        </div>
+    </div>
+</div>
+
+<div class="container mt-3">
+    <form id="search-form" method="get">
+  <div class="row g-2 mb-3">
+    <div class="col-md-4">
+      <input type="text" name="student_name" value="{{ student_name }}" class="form-control search-input"
+             placeholder="Talaba ismi yoki familiyasi" />
+    </div>
+    <div class="col-md-3">
+      <input type="text" name="amount" value="{{ amount }}" class="form-control search-input"
+             placeholder="To‘lov miqdori" />
+    </div>
+    <div class="col-md-4">
+      <input type="text" name="added_by" value="{{ added_by }}" class="form-control search-input"
+             placeholder="Qo‘shgan foydalanuvchi" />
+    </div>
+  </div>
+</form>
+
+
+    <div id="payments-table">
+        <div class="table-responsive">
+            <table class="table table-striped">
+                <div id="payments-table">
+                    {% include "payment/_payments_table.html" %}
+                </div>
+
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Modal: Yangi to‘lov qo‘shish -->
+<div class="modal fade" id="addPaymentModal" tabindex="-1" aria-labelledby="addPaymentLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <form id="payment-form">
+        <div class="modal-header">
+          <h5 class="modal-title">Yangi to‘lov</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Yopish"></button>
+        </div>
+        <div class="modal-body">
+          <div class="mb-3">
+            <label class="form-label">Talaba</label>
+            <select name="student" class="form-select select2-field" required>
+              {% for student in students %}
+                <option value="{{ student.id }}">{{ student.first_name }} {{ student.last_name }} ({{ student.room }})</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">To‘lov miqdori</label>
+            <input type="number" name="amount" class="form-control" required>
+          </div>
+<div class="mb-3">
+            <label class="form-label">chek sanasi</label>
+            <input type="date" name="payment_time" class="form-control">
+          </div>
+
+        </div>
+        <div class="modal-footer">
+          <button type="submit" class="btn btn-primary">Saqlash</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+$(document).ready(function () {
+    $('.select2-field').select2({
+        dropdownParent: $('#addPaymentModal'),
+        placeholder: "Talabani tanlang",
+        allowClear: true
+    });
+
+    $("#payment-form").on("submit", function (e) {
+        e.preventDefault();
+        const formData = $(this).serialize();
+
+        $.ajax({
+            url: "{% url 'payment_add' %}",
+            method: "POST",
+            data: formData,
+            headers: { "X-CSRFToken": "{{ csrf_token }}" },
+            success: function (response) {
+                if (response.success) {
+                    location.reload();
+                }
+            },
+            error: function () {
+                alert("Xatolik yuz berdi.");
+            }
+        });
+    });
+
+$(document).ready(function () {
+    function fetchPayments() {
+    const formData = $("#search-form").serialize();
+
+    $.ajax({
+        url: "{% url 'payments' %}",
+        type: "GET",
+        data: formData,
+        headers: { "X-Requested-With": "XMLHttpRequest" },
+        success: function (data) {
+            $("#payments-table").html(data); // Butun `#payments-table`ni yangilash
+        },
+        error: function () {
+            console.error("Xatolik yuz berdi.");
+        }
+    });
+}
+
+    $(".search-input").on("keyup change", function () {
+        fetchPayments();
+    });
+});
+
+    // Excel eksport
+    $("#export-btn").on("click", function () {
+        const params = $("#search-form").serialize();
+        const url = `{% url 'payments' %}?${params}&export=excel`;
+        window.location.href = url;
+    });
+});
+</script>
+{% endblock %}

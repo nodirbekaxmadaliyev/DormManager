@@ -1,0 +1,299 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block content %}
+
+{% if device_errors %}
+<div class="alert alert-danger alert-dismissible fade show mt-3" role="alert">
+    <strong>Qurilmaga bog‘lanib bo‘lmadi!</strong><br>
+    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Yopish"></button>
+</div>
+{% endif %}
+
+
+<div class="container mt-3">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h2 class="text-center flex-grow-1">Talabalar</h2>
+        <div>
+            <a href="{% url 'student_add' %}" class="btn btn-success">Qo'shish</a>
+            <button id="export-btn" class="btn btn-primary">Yuklash</button>
+            {% if user.role == "director" %}
+            <button class="btn btn-warning" data-bs-toggle="modal" data-bs-target="#addStudentsModal">
+                Talabalarni qurilmalarga qo‘shish
+            </button>
+            <form action="{% url 'students_delete_all' %}" method="post" style="display:inline;">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-danger" onclick="return confirm('Haqiqatan ham barcha talabalarni o‘chirmoqchimisiz?')">
+                    Hammasini o‘chirish
+                </button>
+            </form>
+            {% endif %}
+
+        </div>
+    </div>
+</div>
+<!-- Modal: TTJ tanlash -->
+<div class="modal fade" id="addStudentsModal" tabindex="-1" aria-labelledby="addStudentsModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="addStudentsModalLabel">Qaysi yotoqxonaning talabalarini qo‘shasiz?</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Yopish"></button>
+      </div>
+      <div class="modal-body">
+        <form id="addStudentsForm">
+          {% csrf_token %}
+          <div class="mb-3">
+            <label for="dormitorySelect" class="form-label">Yotoqxona</label>
+            <select id="dormitorySelect" name="dormitory_id" class="form-select" required>
+              <option value="">Tanlang...</option>
+              {% for dorm in dormitories %}
+                <option value="{{ dorm.id }}">{{ dorm.name }}</option>
+              {% endfor %}
+            </select>
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Bekor qilish</button>
+        <button type="button" id="confirmAddStudents" class="btn btn-primary">Tasdiqlash</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="container mt-4">
+    <h5><strong>Barcha talabalar soni: </strong>{{ all_student_count }}</h5>
+
+    <div class="p-3 mb-4 rounded" style="background-color: #e8f6ff; border: 1px solid #b6e0ff;">
+    <h5 class="mt-2"><strong>Yotoqxona bo‘yicha statistikalar:</strong></h5>
+    <ul class="list-group mb-0 mt-2">
+        {% for stat in dormitory_stats %}
+        <li class="list-group-item d-flex justify-content-between align-items-center" style="background-color: #f9fdff;">
+            <div>
+                <strong>{{ stat.name }}</strong><br>
+                <small class="text-muted">Jami: {{ stat.total }}, Ichkarida: {{ stat.in_dorm }}</small>
+                <h6 class="text-muted">O‘chirilgan talabalar: {{ stat.deleted_count }}</h6>
+
+            </div>
+
+            <span class="badge bg-primary rounded-pill">{{ stat.in_dorm }}</span>
+        </li>
+
+        {% empty %}
+        <li class="list-group-item" style="background-color: #f9fdff;">Yotoqxonalar topilmadi.</li>
+        {% endfor %}
+    </ul>
+</div>
+
+</div>
+
+
+<div class="container mt-3">
+    <form id="search-form" method="get">
+        <div class="table-responsive">
+            <table class="table table-striped">
+                <thead>
+    <tr>
+        {% if request.user.director %}
+        <th>Yotoqxona</th>
+        {% endif %}
+        <th>Xonasi</th>
+        <th>Ismi-familiyasi</th>
+        <th>Fakulteti</th>
+        <th>Holati</th>
+    </tr>
+<tr>
+    {% if request.user.director %}
+    <td>
+        <select name="dormitory" class="form-select search-select" onchange="this.form.submit()">
+            <option value="">Barchasi</option>
+            {% for dorm in dormitories %}
+                <option value="{{ dorm.name }}" {% if request.GET.dormitory == dorm.name %}selected{% endif %}>
+                    {{ dorm.name }}
+                </option>
+            {% endfor %}
+        </select>
+    </td>
+    {% endif %}
+
+        <td><input type="text" name="room" class="form-control search-input" placeholder="" value="{{ request.GET.room }}"></td>
+        <td><input type="text" name="first_name" class="form-control search-input" placeholder="" value="{{ request.GET.first_name }}"></td>
+        <td><input type="text" name="faculty" class="form-control search-input" placeholder="" value="{{ request.GET.faculty }}"></td>
+        <td>
+            <select name="status" class="form-select search-select" onchange="this.form.submit()">
+            <option value="">Barchasi</option>
+            <option value="in_dormitory" {% if request.GET.status == 'in_dormitory' %}selected{% endif %}>Ichkarida</option>
+            <option value="out_dormitory" {% if request.GET.status == 'out_dormitory' %}selected{% endif %}>Tashqarida</option>
+            <option value="deleted" {% if request.GET.status == 'deleted' %}selected{% endif %}>O‘chirilganlar</option>
+        </select>
+
+        </td>
+    </tr>
+</thead>
+<tbody>
+    {% for student in object_list %}
+    <tr>
+        {% if request.user.director %}
+        <td>{{ student.dormitory.name }}</td>
+        {% endif %}
+        <td>{{ student.room.number }}</td>
+        <td>{{ student.first_name }} {{ student.last_name }}</td>
+        <td>{{ student.faculty }}</td>
+        <td>
+            {% if student.is_deleted and request.user.role == 'Xodim' %}
+            <a class="btn btn-sm btn-secondary disabled" tabindex="-1" aria-disabled="true">
+                Batafsil
+            </a>
+        {% else %}
+            <a href="{% url 'student_detail' student.id %}" class="btn btn-sm btn-success">
+                {% if student.is_deleted %}
+                O'chirilgan
+                {% else %}
+                Batafsil
+                {% endif %}
+            </a>
+        {% endif %}
+        </td>
+    </tr>
+    {% empty %}
+    <tr>
+        <td colspan="5" class="text-center">Hech qanday natija topilmadi</td>
+    </tr>
+    {% endfor %}
+</tbody>
+
+            </table>
+            <div class="container mt-2 mb-2">
+                <p><strong>Topilgan talabalar soni:</strong> <span id="total-count">{{ total_count }}</span></p>
+            </div>
+        </div>
+    </form>
+
+    <!-- Pagination -->
+    {% if is_paginated %}
+    <nav class="mt-3">
+    <ul class="pagination justify-content-center">
+        {% if page_obj.has_previous %}
+            <li class="page-item">
+                <a class="page-link" href="?page=1{{ request.GET.urlencode|cut:'page='|yesno:'&,' }}" aria-label="Birinchi">
+                    &laquo;&laquo;
+                </a>
+            </li>
+            <li class="page-item">
+                <a class="page-link" href="?page={{ page_obj.previous_page_number }}{{ request.GET.urlencode|cut:'page='|yesno:'&,' }}">&laquo;</a>
+            </li>
+        {% endif %}
+
+        {# Faqat yaqin 5 ta sahifani ko‘rsatish #}
+        {% for num in page_obj.paginator.page_range %}
+            {% if num > page_obj.number|add:'-5' and num < page_obj.number|add:'5' %}
+                <li class="page-item {% if page_obj.number == num %}active{% endif %}">
+                    <a class="page-link"
+                       href="?page={{ num }}{{ request.GET.urlencode|cut:'page='|yesno:'&,' }}">{{ num }}</a>
+                </li>
+            {% elif num == 1 or num == page_obj.paginator.num_pages %}
+                <li class="page-item {% if page_obj.number == num %}active{% endif %}">
+                    <a class="page-link"
+                       href="?page={{ num }}{{ request.GET.urlencode|cut:'page='|yesno:'&,' }}">{{ num }}</a>
+                </li>
+            {% elif num == page_obj.number|add:'-5' or num == page_obj.number|add:'5' %}
+                <li class="page-item disabled"><a class="page-link">...</a></li>
+            {% endif %}
+        {% endfor %}
+
+        {% if page_obj.has_next %}
+            <li class="page-item">
+                <a class="page-link"
+                   href="?page={{ page_obj.next_page_number }}{{ request.GET.urlencode|cut:'page='|yesno:'&,' }}">&raquo;</a>
+            </li>
+            <li class="page-item">
+                <a class="page-link"
+                   href="?page={{ page_obj.paginator.num_pages }}{{ request.GET.urlencode|cut:'page='|yesno:'&,' }}"
+                   aria-label="Oxirgi">
+                    &raquo;&raquo;
+                </a>
+            </li>
+        {% endif %}
+    </ul>
+</nav>
+
+    {% endif %}
+</div>
+
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script>
+$(document).ready(function() {
+    $(".search-input, .search-select").on("keyup change", function() {
+        let formData = $("#search-form").serialize();
+
+        $.ajax({
+            url: "{% url 'students' %}",
+            type: "GET",
+            data: formData,
+            headers: {
+                "X-Requested-With": "XMLHttpRequest"
+            },
+            success: function(data) {
+                $("tbody").html($(data).find("tbody").html());
+                $("#total-count").text($(data).find("#total-count").text());
+            },
+            error: function(xhr, status, error) {
+                console.log("Xatolik:", error);
+            }
+        });
+
+    });
+
+    // Yuklash tugmasi bosilganda eksport qilish
+    $("#export-btn").on("click", function() {
+        const params = $("#search-form").serialize();
+        const url = `{% url 'students' %}?${params}&export=excel`;
+        window.location.href = url;
+    });
+
+});
+
+$(document).ready(function() {
+    $("#confirmAddStudents").on("click", function() {
+        const dormitoryId = $("#dormitorySelect").val();
+        if (!dormitoryId) {
+            alert("Iltimos, yotoqxonani tanlang!");
+            return;
+        }
+
+        $(this).prop("disabled", true).text("Yuborilmoqda...");
+
+        $.ajax({
+            url: "{% url 'add_students_to_devices' %}",
+            type: "POST",
+            data: {
+                dormitory_id: dormitoryId,
+                csrfmiddlewaretoken: $("input[name=csrfmiddlewaretoken]").val(),
+            },
+            success: function(response) {
+                $("#confirmAddStudents").prop("disabled", false).text("Tasdiqlash");
+                $("#addStudentsModal").modal("hide");
+
+                const successCount = response.success_count || 0;
+                const failedCount = response.failed_count || 0;
+
+                const alertHtml = `
+                    <div class="alert alert-info alert-dismissible fade show mt-3" role="alert">
+                        <strong>Yuklash yakunlandi!</strong><br>
+                        Muvaffaqiyatli: ${successCount} ta, Xatolik: ${failedCount} ta
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Yopish"></button>
+                    </div>
+                `;
+                $(".container").first().prepend(alertHtml);
+            },
+            error: function(xhr) {
+                $("#confirmAddStudents").prop("disabled", false).text("Tasdiqlash");
+                alert("Xatolik yuz berdi: " + xhr.responseText);
+            }
+        });
+    });
+});
+
+</script>
+{% endblock %}

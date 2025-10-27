@@ -1,0 +1,24 @@
+{% extends 'base.html' %}
+{% load widget_tweaks %}
+{% block content %}
+<div class="container mt-5">
+    <h2>Xonani tahrirlash</h2>
+    <form method="post">
+        {% csrf_token %}
+        <div class="mb-3">
+    <label for="id_dormitory" class="form-label">Yotoqxona</label>
+    {{ form.dormitory|add_class:"form-select" }}
+</div>
+<div class="mb-3">
+    <label for="id_number" class="form-label">Xona raqami</label>
+    {{ form.number|add_class:"form-control" }}
+</div>
+<div class="mb-3">
+    <label for="id_size" class="form-label">Sig‘imi</label>
+    {{ form.size|add_class:"form-control" }}
+</div>
+        <button type="submit" class="btn btn-primary">Saqlash</button>
+        <a href="{% url 'rooms' %}" class="btn btn-secondary">Bekor qilish</a>
+    </form>
+</div>
+{% endblock %}

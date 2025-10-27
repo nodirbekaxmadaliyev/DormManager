@@ -1,0 +1,125 @@
+{% extends "base.html" %}
+{% load widget_tweaks %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="card">
+        <div class="card-header bg-primary text-white">
+            <h4 class="mb-0">{{ title }}: {{ object.last_name }} {{ object.first_name }}</h4>
+        </div>
+
+        <div class="card-body">
+            <form method="post" enctype="multipart/form-data">
+                {% csrf_token %}
+
+                {% if form.errors %}
+                <div class="alert alert-danger">
+                    <strong>Xatolik!</strong>
+                    <ul>
+                        {% for field, errors in form.errors.items %}
+                            {% for error in errors %}
+                                <li>{{ field.label }}: {{ error }}</li>
+                            {% endfor %}
+                        {% endfor %}
+                    </ul>
+                </div>
+                {% endif %}
+
+                <div class="row">
+                    <!-- Chap tomonda shaxsiy va fakultet ma’lumotlari -->
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label for="{{ form.first_name.id_for_label }}" class="form-label">Ism</label>
+                            {{ form.first_name|add_class:"form-control" }}
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="{{ form.last_name.id_for_label }}" class="form-label">Familiya</label>
+                            {{ form.last_name|add_class:"form-control" }}
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="{{ form.faculty.id_for_label }}" class="form-label">Fakultet</label>
+                            {{ form.faculty|add_class:"form-control" }}
+                        </div>
+                    </div>
+
+                    <!-- O‘ng tomonda yotoqxona ma’lumotlari -->
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label for="{{ form.dormitory.id_for_label }}" class="form-label">Yotoqxona</label>
+
+                            <!-- readonly ko‘rinishdagi select -->
+                            {{ form.dormitory|add_class:"form-select"|attr:"id=id_dormitory"|attr:"disabled" }}
+
+                            <!-- qiymatni form orqali yuborish uchun yashirin input -->
+                            <input type="hidden" name="dormitory" value="{{ form.dormitory.value }}">
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="{{ form.room.id_for_label }}" class="form-label">Xona</label>
+                            {{ form.room|add_class:"form-select"|attr:"id=id_room" }}
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="{{ form.arrival_time.id_for_label }}" class="form-label">Kelgan sanasi</label>
+                            {{ form.arrival_time|add_class:"form-control" }}
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="{{ form.checkout_time.id_for_label }}" class="form-label">Ketgan sanasi</label>
+                            {{ form.checkout_time|add_class:"form-control" }}
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Tugmalar -->
+                <div class="d-flex justify-content-between mt-4">
+                    <a href="{% url 'student_detail' object.id %}" class="btn btn-secondary">
+                        <i class="fas fa-times"></i> Bekor qilish
+                    </a>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-save"></i> Saqlash
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- AJAX orqali xonalarni yuklash -->
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const dormitorySelect = document.getElementById('id_dormitory');
+    const roomSelect = document.getElementById('id_room');
+    const studentId = "{{ object.id }}";
+
+    if (dormitorySelect && roomSelect) {
+        dormitorySelect.addEventListener('change', function () {
+            const dormitoryId = this.value;
+            if (!dormitoryId) return;
+
+            fetch(`/students/ajax/load-rooms/?dormitory=${dormitoryId}&student_id=${studentId}`)
+                .then(response => response.json())
+                .then(data => {
+                    roomSelect.innerHTML = '<option value="">Xona tanlang</option>';
+                    data.forEach(room => {
+                        const option = document.createElement('option');
+                        option.value = room.id;
+                        option.textContent = room.number;
+                        if (room.id == "{{ form.room.value }}") {
+                            option.selected = true; // eski xona belgilansin
+                        }
+                        roomSelect.appendChild(option);
+                    });
+                });
+        });
+
+        // sahifa ochilganda avtomatik yuklash
+        if (dormitorySelect.value) {
+            dormitorySelect.dispatchEvent(new Event('change'));
+        }
+    }
+});
+</script>
+{% endblock %}

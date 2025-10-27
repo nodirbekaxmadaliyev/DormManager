@@ -1,0 +1,143 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="card">
+        <div class="card-header">
+            <h3 class="card-title">{{ object.get_full_name }} ma'lumotlarini tahrirlash</h3>
+        </div>
+        <div class="card-body">
+            <form method="post" enctype="multipart/form-data">
+                {% csrf_token %}
+
+                <div class="row mb-4">
+                    <div class="col-md-3">
+                        {% if object.photo %}
+                            <img src="{{ object.photo.url }}" alt="Hodim surati" class="img-thumbnail w-100 h-100 object-fit-cover">
+                        {% else %}
+                            <div class="bg-light text-center d-flex align-items-center justify-content-center w-100 h-100 border">
+                                <i class="bi bi-person fs-1 text-muted"></i>
+                            </div>
+                        {% endif %}
+                    </div>
+
+                    <div class="col-md-9">
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label for="id_username" class="form-label">Foydalanuvchi nomi</label>
+                                <input type="text" name="username" value="{{ form.instance.username }}" class="form-control" id="id_username" readonly>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="id_hire_date" class="form-label">Ishga qabul qilingan sana</label>
+                                <input type="date" name="hire_date" value="{{ form.instance.hire_date }}" class="form-control" id="id_hire_date">
+                            </div>
+                        </div>
+
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label for="id_first_name" class="form-label">Ism</label>
+                                <input type="text" name="first_name" value="{{ form.instance.first_name }}" class="form-control" id="id_first_name">
+                            </div>
+                            <div class="col-md-6">
+                                <label for="id_last_name" class="form-label">Familiya</label>
+                                <input type="text" name="last_name" value="{{ form.instance.last_name }}" class="form-control" id="id_last_name">
+                            </div>
+                        </div>
+
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label for="id_work_start" class="form-label">Ish boshlanish vaqti</label>
+                                <input type="time" name="work_start" value="{{ form.instance.work_start|time:'H:i' }}" class="form-control" id="id_work_start">
+                            </div>
+                            <div class="col-md-6">
+                                <label for="id_work_end" class="form-label">Ish tugash vaqti</label>
+                                <input type="time" name="work_end" value="{{ form.instance.work_end|time:'H:i' }}" class="form-control" id="id_work_end">
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-6">
+                                <label for="id_salary" class="form-label">Maosh</label>
+                                <input type="number" name="salary" value="{{ form.instance.salary }}" class="form-control" id="id_salary">
+                            </div>
+                            <div class="col-md-6">
+                                <label for="id_phone_number" class="form-label">Telefon raqami</label>
+                                <input type="text" name="phone_number" value="{{ form.instance.phone_number }}" class="form-control" id="id_phone_number">
+                            </div>
+                        </div>
+                        <div class="row mt-3">
+    <div class="col-md-6">
+        <label class="form-label">Yotoqxonadami:</label>
+        <input type="text"
+               class="form-control bg-light"
+               value="{{ object.is_in_dormitory|yesno:'Ichkarida,Tashqarida' }}"
+               readonly>
+    </div>
+</div>
+                    </div>
+                </div>
+
+                <div class="form-group mt-4">
+                    <button type="submit" class="btn btn-primary">Saqlash</button>
+                    <a href="{% url 'employees' %}" class="btn btn-secondary">Bekor qilish</a>
+                    <button type="button" class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#deleteModal">
+                        O'chirish
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+
+<!-- O'chirish uchun modal oyna -->
+<div class="modal fade" id="deleteModal" tabindex="-1" aria-labelledby="deleteModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="deleteModalLabel">Hodimni o'chirish</h5>
+                <button type="button" class="btn-close" data-bs-close="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p>Rostan ham <strong>{{ object.get_full_name }}</strong> ni o'chirmoqchimisiz?</p>
+                <p class="text-danger">Bu amalni qaytarib bo'lmaydi!</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Bekor qilish</button>
+                <form method="post" action="{% url 'employee_delete' object.pk %}">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-danger">O'chirish</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .form-control, .form-select {
+        padding: 8px 12px;
+        border: 1px solid #ced4da;
+        border-radius: 4px;
+        transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+    }
+
+    .form-control:focus, .form-select:focus {
+        border-color: #86b7fe;
+        outline: 0;
+        box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
+    }
+
+    label {
+        font-weight: 500;
+        margin-bottom: 5px;
+        display: block;
+    }
+
+    .img-thumbnail {
+        border: 1px solid #dee2e6;
+        border-radius: 4px;
+        padding: 4px;
+        background-color: #fff;
+    }
+</style>
+{% endblock %}

@@ -1,0 +1,185 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="card">
+        <div class="card-header bg-primary text-white">
+            <div class="d-flex justify-content-between align-items-center">
+                <h4 class="mb-0">{{ student.last_name }} {{ student.first_name }}</h4>
+                <a href="{% url 'students' %}" class="btn btn-light btn-sm">
+                    <i class="fas fa-arrow-left"></i> Orqaga
+                </a>
+            </div>
+        </div>
+        
+        <div class="card-body">
+            <div class="row">
+                <!-- Talaba rasmi -->
+                <div class="col-md-4 text-center mb-3">
+                    {% if student.image %}
+                        <img src="{{ student.image.url }}" alt="Talaba rasmi" class="img-fluid rounded" style="max-height: 300px;">
+                    {% else %}
+                        <div class="bg-light p-5 text-center">
+                            <i class="fas fa-user fa-5x text-secondary"></i>
+                            <p class="mt-2">Rasm mavjud emas</p>
+                        </div>
+                    {% endif %}
+                </div>
+                
+                <!-- Talaba ma'lumotlari -->
+                <div class="col-md-8">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h5>Asosiy ma'lumotlar</h5>
+                            <ul class="list-group list-group-flush mb-3">
+
+                                <li class="list-group-item d-flex justify-content-between">
+                                    <span class="fw-bold">Yotoqxona:</span>
+                                    <span>{{ student.dormitory.name }}</span>
+                                </li>
+
+                                <li class="list-group-item d-flex justify-content-between">
+                                    <span class="fw-bold">ID:</span>
+                                    <span>{{ student.id }}</span>
+                                </li>
+                                <li class="list-group-item d-flex justify-content-between">
+                                    <span class="fw-bold">Xona:</span>
+                                    <span>{{ student.room }}</span>
+                                </li>
+                                <li class="list-group-item d-flex justify-content-between">
+                                    <span class="fw-bold">Fakultet:</span>
+                                    <span>{{ student.faculty }}</span>
+                                </li>
+                                <li class="list-group-item d-flex justify-content-between">
+                                    <span class="fw-bold">Telefon:</span>
+                                    <span>{{ student.phone_number }}</span>
+                                </li>
+                                <li class="list-group-item d-flex justify-content-between">
+                                    <span class="fw-bold">Holati:</span>
+                                    <span class="badge bg-{% if student.is_in_dormitory %}success{% else %}warning{% endif %}">
+                                        {% if student.is_in_dormitory %}Ichkarida{% else %}Tashqarida{% endif %}
+                                    </span>
+                                </li>
+                            </ul>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <h5>Shartnoma ma'lumotlari</h5>
+                            <ul class="list-group list-group-flush mb-3">
+                                <li class="list-group-item d-flex justify-content-between">
+                                    <span class="fw-bold">Shartnoma raqami:</span>
+                                    <span>{{ student.contract_number }}</span>
+                                </li>
+                                <li class="list-group-item d-flex justify-content-between">
+                                    <span class="fw-bold">Shartnoma sanasi:</span>
+                                    <span>{{ student.contract_date|date:"d.m.Y" }}</span>
+                                </li>
+                                <li class="list-group-item d-flex justify-content-between">
+                                    <span class="fw-bold">Kelgan sana:</span>
+                                    <span>{{ student.arrival_time|date:"d.m.Y" }}</span>
+                                </li>
+                                <li class="list-group-item d-flex justify-content-between">
+                                    <span class="fw-bold">Ketadigan sana:</span>
+                                    <span>
+                                        {% if student.checkout_time %}
+                                            {{ student.checkout_time|date:"d.m.Y" }}
+                                        {% else %}
+                                            <span class="text-muted">Hali ketmagan</span>
+                                        {% endif %}
+                                    </span>
+                                </li>
+                                <li class="list-group-item d-flex justify-content-between">
+                                    <span class="fw-bold">To'lov miqdori:</span>
+                                    <span>{{ student.total_payment }} so'm</span>
+                                </li>
+                            </ul>
+                        </div>
+                    </div>
+                    
+                    <div class="row mt-3">
+                        <div class="col-12">
+                            <h5>Ota-ona ma'lumotlari</h5>
+                            <ul class="list-group list-group-flush">
+                                <li class="list-group-item d-flex justify-content-between">
+                                    <span class="fw-bold">Ota-ona F.I.SH:</span>
+                                    <span>{{ student.parent_full_name }}</span>
+                                </li>
+
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="card-footer text-end">
+    {% if student.is_deleted %}
+        <!-- O'chirilgan talaba uchun faqat o'chirish tugmasi faol -->
+        <button type="button" class="btn btn-danger me-2" disabled title="Talaba o‘chirilgan">🚫 Bloklash</button>
+        <button type="button" class="btn btn-primary me-2" disabled title="Talaba o‘chirilgan">
+            <i class="fas fa-edit"></i> Tahrirlash
+        </button>
+
+        <!-- To'g'ridan-to'g'ri modeldan o'chirish uchun modal -->
+        <button type="button" class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#deleteFromModelModal">
+            <i class="fas fa-trash"></i> O‘chirish
+        </button>
+    {% else %}
+        {% if student.blocked %}
+            <form action="{% url 'toggle_block' student.pk %}" method="post" style="display:inline;">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-success">🔓 Ochish</button>
+            </form>
+        {% else %}
+            <form action="{% url 'toggle_block' student.pk %}" method="post" style="display:inline;">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-danger">🚫 Bloklash</button>
+            </form>
+        {% endif %}
+        <a href="{% url 'student_update' student.pk %}" class="btn btn-primary me-2">
+            <i class="fas fa-edit"></i> Tahrirlash
+        </a>
+
+        <!-- Oddiy delete modal -->
+        <button type="button" class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#deleteModal">
+            <i class="fas fa-trash"></i> O‘chirish
+        </button>
+    {% endif %}
+</div>
+
+<!-- Modal: oddiy o‘chirish -->
+{% include 'student/student_delete.html' %}
+
+<!-- Modal: modeldan butunlay o‘chirish -->
+<div class="modal fade" id="deleteFromModelModal" tabindex="-1" aria-labelledby="deleteFromModelModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title" id="deleteFromModelModalLabel">Talabani Bazadan O‘chirish</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p>Haqiqatan ham <strong>{{ student.last_name }} {{ student.first_name }}</strong> ismli talabani
+                <strong>bazadan butunlay o‘chirmoqchimisiz?</strong></p>
+                <p class="text-danger"><i class="fas fa-exclamation-triangle"></i> Bu amalni qaytarib bo‘lmaydi!</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="fas fa-times"></i> Bekor qilish
+                </button>
+                <form method="post" action="{% url 'student_delete_from_model' student.pk %}">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-danger">
+                        <i class="fas fa-trash"></i> O‘chirish
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+    </div>
+</div>
+{% include 'student/student_delete.html' %}
+{% endblock %}
