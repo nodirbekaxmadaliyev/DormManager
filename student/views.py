@@ -16,7 +16,7 @@ from django.shortcuts import render, get_object_or_404
 from django.http import JsonResponse
 from django.db import models
 from django.views.decorators.csrf import csrf_exempt
-
+from utils.utils import filter_by_user_role
 from django.views import View
 from django.contrib import messages
 from django.shortcuts import redirect
@@ -30,15 +30,9 @@ class StudentListView(ListView):
     paginate_by = 20
 
     def get_queryset(self):
+
         queryset = super().get_queryset()
-
-        user = self.request.user
-
-        # Foydalanuvchining direktor yoki hodimligiga qarab filtr
-        if hasattr(user, 'director'):
-            queryset = queryset.filter(dormitory__director=user.director)
-        else:
-            queryset = queryset.filter(dormitory__employees__user=user)
+        queryset = filter_by_user_role(queryset, self.request.user)
 
         # Status filter (ichkarida/tashqarida)
         status = self.request.GET.get('status', '')

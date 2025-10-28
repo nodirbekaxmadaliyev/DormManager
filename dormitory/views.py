@@ -20,7 +20,7 @@ from decimal import Decimal, ROUND_HALF_UP
 from datetime import date
 from dateutil.relativedelta import relativedelta
 from django.views.generic import DetailView
-
+from utils.utils import filter_by_user_role
 
 def load_rooms(request):
     dormitory_id = request.GET.get('dormitory')
@@ -103,14 +103,9 @@ class RoomListView(ListView):
 
 
     def get_queryset(self):
-        user = self.request.user
 
-        if hasattr(user, 'director'):
-            queryset = Room.objects.filter(dormitory__director=user.director)
-        elif hasattr(user, 'employee'):
-            queryset = Room.objects.filter(dormitory=user.employee.dormitory)
-        else:
-            return Room.objects.none()
+        queryset = super().get_queryset()
+        queryset = filter_by_user_role(queryset, self.request.user)
 
         dormitory_q = self.request.GET.get('dormitory', '').strip()
         number_q = self.request.GET.get('number', '').strip()

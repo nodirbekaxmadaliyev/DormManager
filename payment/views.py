@@ -13,7 +13,7 @@ from decimal import Decimal
 from django.contrib import messages
 from django.shortcuts import redirect
 from utils.hikvision import block_user_on_devices, open_user_on_devices
-
+from utils.utils import filter_by_user_role_payment
 from django.template.loader import render_to_string
 
 class DebtStatisticsView(ListView):
@@ -165,15 +165,7 @@ class PaymentListView(ListView):
     paginate_by = 20
 
     def get_queryset(self):
-        queryset = super().get_queryset()
-        user = self.request.user
-
-        if hasattr(user, 'employee'):
-            queryset = queryset.filter(student__dormitory=user.employee.dormitory)
-        elif hasattr(user, 'director'):
-            dormitories = user.director.dormitories.all()
-            queryset = queryset.filter(student__dormitory__in=dormitories)
-
+        queryset = filter_by_user_role_payment(super().get_queryset(), self.request.user)
         # 🔍 Qidiruv parametrlari
         student_name = self.request.GET.get('student_name', '').strip()
         amount = self.request.GET.get('amount', '').strip()
