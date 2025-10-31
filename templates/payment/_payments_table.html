@@ -1,3 +1,4 @@
+{% load humanize %}
 <div class="table-responsive">
     <table class="table table-striped">
         <thead>
@@ -13,9 +14,14 @@
             {% for payment in object_list %}
             <tr>
                 <td>{{ payment.student_name }}</td>
-                <td>{{ payment.amount }} so‘m</td>
+                <td>{{ payment.amount|intcomma|stringformat:"s"|safe }} so‘m</td>
                 <td>{{ payment.payment_time }}</td>
-                <th>{{ payment.added_by }}</th>
+                <th>
+                    {% if payment.added_by.first_name %}
+                    {{ payment.added_by.first_name }} {{ payment.added_by.last_name }}</th>
+                    {% else %}
+                    {{ payment.added_by.username }}
+                    {% endif %}
                 <td>
                     {% if payment.student %}
                         {% if payment.student.is_deleted %}

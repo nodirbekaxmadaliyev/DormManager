@@ -39,6 +39,7 @@ INSTALLED_APPS = [
     'payment',
     'expense',
     'stream',
+    'django.contrib.humanize',
 ]
 
 MIDDLEWARE = [

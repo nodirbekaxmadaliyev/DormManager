@@ -2,6 +2,7 @@
 {% load static %}
 
 {% block content %}
+{% load humanize %}
 <div class="container mt-4">
     <div class="card">
         <div class="card-header bg-primary text-white">
@@ -91,7 +92,7 @@
                                 </li>
                                 <li class="list-group-item d-flex justify-content-between">
                                     <span class="fw-bold">To'lov miqdori:</span>
-                                    <span>{{ student.total_payment }} so'm</span>
+                                    <span>{{ student.total_payment|intcomma|stringformat:"s"|safe }} so'm</span>
                                 </li>
                             </ul>
                         </div>

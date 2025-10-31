@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% load static %}
-
 {% block content %}
+{% load humanize %}
 
 {% if device_errors %}
 <div class="alert alert-danger alert-dismissible fade show mt-3" role="alert">
@@ -63,7 +63,7 @@
 </div>
 
 <div class="container mt-4">
-    <h5><strong>Barcha talabalar soni: </strong>{{ all_student_count }}</h5>
+    <h5><strong>Barcha talabalar soni: </strong>{{ all_student_count|intcomma|stringformat:"s"|safe }}</h5>
 
     <div class="p-3 mb-4 rounded" style="background-color: #e8f6ff; border: 1px solid #b6e0ff;">
     <h5 class="mt-2"><strong>Yotoqxona bo‘yicha statistikalar:</strong></h5>
@@ -72,12 +72,12 @@
         <li class="list-group-item d-flex justify-content-between align-items-center" style="background-color: #f9fdff;">
             <div>
                 <strong>{{ stat.name }}</strong><br>
-                <small class="text-muted">Jami: {{ stat.total }}, Ichkarida: {{ stat.in_dorm }}</small>
-                <h6 class="text-muted">O‘chirilgan talabalar: {{ stat.deleted_count }}</h6>
+                <small class="text-muted">Jami: {{ stat.total|intcomma|stringformat:"s"|safe }}, Ichkarida: {{ stat.in_dorm|intcomma|stringformat:"s"|safe }}</small>
+                <h6 class="text-muted">O‘chirilgan talabalar: {{ stat.deleted_count|intcomma|stringformat:"s"|safe }}</h6>
 
             </div>
 
-            <span class="badge bg-primary rounded-pill">{{ stat.in_dorm }}</span>
+            <span class="badge bg-primary rounded-pill">{{ stat.in_dorm|intcomma|stringformat:"s"|safe }}</span>
         </li>
 
         {% empty %}
@@ -294,6 +294,7 @@ $(document).ready(function() {
         });
     });
 });
+
 
 </script>
 {% endblock %}

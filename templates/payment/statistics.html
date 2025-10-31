@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 {% block content %}
-
+{% load humanize %}
 <div class="container mt-4">
     <h2 class="mb-4">Qarzdorlik statistikasi</h2>
 
@@ -9,17 +9,17 @@
     <div class="row mb-3" id="statistics-section">
         <div class="col-md-4">
             <div class="alert alert-primary">
-                <strong>Jami kerakli to‘lov:</strong> <span id="total-required">{{ total_required|floatformat:0 }}</span> so‘m
+                <strong>Jami kerakli to‘lov:</strong> <span id="total-required">{{ total_required|intcomma|stringformat:"s"|safe }}</span> so‘m
             </div>
         </div>
         <div class="col-md-4">
             <div class="alert alert-success">
-                <strong>Jami to‘langan:</strong> <span id="total-paid">{{ total_paid|floatformat:0 }}</span> so‘m
+                <strong>Jami to‘langan:</strong> <span id="total-paid">{{ total_paid|intcomma|stringformat:"s"|safe }}</span> so‘m
             </div>
         </div>
         <div class="col-md-4">
             <div class="alert alert-danger">
-                <strong>Jami qarzdorlik:</strong> <span id="total-debt">{{ total_debt|floatformat:0 }}</span> so‘m
+                <strong>Jami qarzdorlik:</strong> <span id="total-debt">{{ total_debt|intcomma|stringformat:"s"|safe }}</span> so‘m
             </div>
         </div>
     </div>
@@ -72,11 +72,11 @@
                 <tr>
                     <td>{{ student.first_name }} {{ student.last_name }}</td>
                     <td>{{ student.months_passed }} oy {{ student.extra_days }} kun</td>
-                    <td>{{ student.required_total|floatformat:0 }} so‘m</td>
-                    <td>{{ student.paid_total|floatformat:0 }} so‘m</td>
+                    <td>{{ student.required_total|floatformat:0|intcomma|stringformat:"s"|safe }} so‘m</td>
+                    <td>{{ student.paid_total|floatformat:0|intcomma|stringformat:"s"|safe }} so‘m</td>
                     <td>
                         {% if student.debt > 0 %}
-                            <span class="text-danger">{{ student.debt|floatformat:0 }} so‘m</span>
+                            <span class="text-danger">{{ student.debt|floatformat:0|intcomma|stringformat:"s"|safe }} so‘m</span>
                         {% else %}
                             <span class="text-success">0</span>
                         {% endif %}

@@ -1,5 +1,6 @@
 {% extends 'base.html' %}
 {% block content %}
+{% load humanize %}
 <div class="container mt-4">
     <h2 class="mb-3">Xona raqami: {{ room.number }}</h2>
     <p><strong>Yotoqxona:</strong> {{ room.dormitory.name }}</p>
