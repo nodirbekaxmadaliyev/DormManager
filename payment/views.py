@@ -15,6 +15,9 @@ from django.shortcuts import redirect
 from utils.hikvision import block_user_on_devices, open_user_on_devices
 from utils.utils import filter_by_user_role_payment
 from django.template.loader import render_to_string
+from datetime import date
+from decimal import Decimal
+from dateutil.relativedelta import relativedelta
 
 class DebtStatisticsView(ListView):
     model = Student
@@ -76,36 +79,42 @@ class DebtStatisticsView(ListView):
             queryset = queryset.filter(Q(first_name__icontains=q) | Q(last_name__icontains=q))
 
         results = []
-        this_year = date.today().year
-        july1_this_year = date(this_year, 7, 1)
-        today = july1_this_year if date.today() < july1_this_year else date(this_year + 1, 7, 1)
 
         for student in queryset:
             if not student.arrival_time:
                 continue
 
-            checkout = student.checkout_time or today
-            monthly = Decimal(student.dormitory.monthly_payment or 0)
-            min_required_months = Decimal(student.dormitory.default_monthly_payment or 0)
+            dormitory = student.dormitory
+            due_date = dormitory.payment_due_date
+
+            if not due_date:
+                continue
+
+            end_date = due_date
+            if student.checkout_time and student.checkout_time < due_date:
+                end_date = student.checkout_time
+
+            if end_date <= student.arrival_time:
+                continue
+
+            monthly = Decimal(dormitory.monthly_payment or 0)
             paid_total = Decimal(student.total_payment or 0)
 
-            delta = relativedelta(checkout, student.arrival_time)
+            delta = relativedelta(end_date, student.arrival_time)
             months_passed = delta.years * 12 + delta.months
-            extra_days = (checkout - (student.arrival_time + relativedelta(months=months_passed))).days
+            extra_days = (end_date - (student.arrival_time + relativedelta(months=months_passed))).days
 
             daily_payment = monthly / Decimal(30)
+            required_total = (Decimal(months_passed) * monthly) + (Decimal(extra_days) * daily_payment)
 
-            if months_passed < min_required_months:
-                required_total = Decimal(months_passed) * monthly + Decimal(extra_days) * daily_payment
-            else:
-                required_total = min_required_months * monthly
-
-            debt = max(required_total - paid_total, Decimal(0))
+            debt = required_total - paid_total
+            if debt < 0:
+                debt = Decimal(0)
 
             if (
-                debt_filter == 'debtors' and debt > 0
-                or debt_filter == 'no_debt' and debt == 0
-                or debt_filter == ''
+                    debt_filter == 'debtors' and debt > 0
+                    or debt_filter == 'no_debt' and debt == 0
+                    or debt_filter == ''
             ):
                 student.months_passed = months_passed
                 student.extra_days = extra_days

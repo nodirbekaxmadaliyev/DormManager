@@ -8,6 +8,7 @@
         <p><strong>Manzil:</strong> {{ dorm.address }}</p>
         <p><strong>Oylik to‘lov:</strong> {{ dorm.monthly_payment|intcomma|stringformat:"s"|safe }} so‘m</p>
         <p><strong>Boshlang‘ich oy to‘lovi:</strong> {{ dorm.default_monthly_payment }} oy</p>
+        <p><strong>To'lov hisoblash sanasi:</strong> {{ dorm.payment_due_date }} </p>
     </div>
 
     <a href="{% url 'dormitory_edit' dorm.pk %}" class="btn btn-warning mb-3">✏️ Tahrirlash</a>

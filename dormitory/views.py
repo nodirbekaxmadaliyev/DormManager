@@ -274,7 +274,7 @@ class DormitoryDetailView(DetailView):
 
 class DormitoryUpdateView(UpdateView):
     model = Dormitory
-    fields = ['name', 'address', 'monthly_payment', 'default_monthly_payment']
+    fields = ['name', 'address', 'monthly_payment', 'default_monthly_payment', 'payment_due_date']
     template_name = 'dormitory/update.html'
 
     def get_success_url(self):

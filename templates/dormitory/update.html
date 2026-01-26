@@ -22,9 +22,20 @@
                     {{ form.monthly_payment|add_class:"form-control" }}
                 </div>
                 <div class="mb-3">
-                    <label for="id_default_monthly_payment" class="form-label">📆 Boshlang‘ich oylar soni</label>
-                    {{ form.default_monthly_payment|add_class:"form-control" }}
-                </div>
+    <label for="payment_due_date" class="form-label">
+        📅 To‘lov bo‘lishi kerak bo‘lgan sana
+    </label>
+    <input
+        type="date"
+        name="payment_due_date"
+        id="payment_due_date"
+        class="form-control"
+        value="{{ dormitory.payment_due_date|date:'Y-m-d' }}"
+    >
+</div>
+
+
+
                 <div class="d-flex justify-content-between">
                     <a href="{% url 'dormitories' %}" class="btn btn-secondary">
                         ⬅️ Orqaga

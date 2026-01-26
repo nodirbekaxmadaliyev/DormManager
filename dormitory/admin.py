@@ -4,7 +4,7 @@ from .models import Dormitory, Device, Room
 
 @admin.register(Dormitory)
 class DormitoryAdmin(admin.ModelAdmin):
-    list_display = ('name', 'address', 'director_full_name')
+    list_display = ('name', 'address', 'director_full_name','payment_due_date')
     search_fields = ('name', 'address', 'director__user__first_name', 'director__user__last_name')
 
     def director_full_name(self, obj):

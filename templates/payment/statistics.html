@@ -28,7 +28,9 @@
     <form method="post" style="display:inline;">
         {% csrf_token %}
         <input type="hidden" name="action" value="open_all">
-        <button type="submit" class="btn btn-success">🔓 Barcha talabani ochish</button>
+       <button type="button" class="btn btn-success" data-bs-toggle="modal" data-bs-target="#openAllModal">
+    🔓 Barcha talabani ochish
+</button>
     </form>
 
     <form method="post" style="display:inline;">
@@ -38,6 +40,26 @@
     </form>
 </div>
 
+<div class="modal fade" id="openAllModal" tabindex="-1">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Tasdiqlash</h5>
+      </div>
+      <div class="modal-body">
+        Barcha talabalarni blokdan chiqarishni xohlaysizmi?
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Yo‘q</button>
+        <form method="post">
+          {% csrf_token %}
+          <input type="hidden" name="action" value="open_all">
+          <button type="submit" class="btn btn-success">Ha</button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
 
     <!-- 🔄 Qidiruv formasi -->
     <form method="get" class="row g-3 mb-3" id="search-form">
